@@ -1,0 +1,9 @@
+{
+    env: local
+    http: {
+        address: 0.0.0.0:8080
+        // Timeout in seconds
+        timeout: 4
+        idle_timeout: 30
+    }
+}
