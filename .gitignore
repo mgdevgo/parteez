@@ -1,0 +1,7 @@
+.env
+
+# IDE settings
+.idea
+.vscode
+
+build/
