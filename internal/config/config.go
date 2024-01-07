@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -24,7 +23,7 @@ type HTTPServer struct {
 	IdleTimeout time.Duration `koanf:"idle_timeout"`
 }
 
-func MustLoad() *Config {
+func New() *Config {
 	k := koanf.New(".")
 
 	if err := k.Load(file.Provider(".env"), dotenv.ParserEnv("", ".", func(s string) string {
@@ -51,7 +50,5 @@ func MustLoad() *Config {
 		log.Fatalf("cannot unmarshal config: %s", err)
 	}
 
-	b, _ := k.Marshal(hjson.Parser())
-	fmt.Println(string(b))
 	return &conf
 }
