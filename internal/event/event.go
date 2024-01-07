@@ -2,6 +2,8 @@ package event
 
 import (
 	"time"
+
+	"github.com/oklog/ulid/v2"
 )
 
 type Status string
@@ -13,9 +15,9 @@ const (
 )
 
 type Event struct {
-	ID          int                 `json:"id"`
+	ID          ulid.ULID           `json:"id"`
 	Name        string              `json:"name"`
-	ArtworkURL  string              `json:"artwork_url"`
+	ImageURL    string              `json:"image_url"`
 	Description string              `json:"description"`
 	Genres      []string            `json:"genres"`
 	LineUp      map[string][]Artist `json:"line_up"`

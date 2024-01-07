@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	tx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/jackc/pgconn"
@@ -18,62 +17,43 @@ var (
 	ErrEventExists   = errors.New("event exists")
 )
 
-type storage struct {
+type Storage struct {
 	*pgxpool.Pool
 	log *slog.Logger
 	tx  tx.CtxGetter
 }
 
-func NewStorage(db *pgxpool.Pool, log *slog.Logger) *storage {
-	return &storage{Pool: db, log: log}
+func NewStorage(db *pgxpool.Pool, log *slog.Logger) *Storage {
+	return &Storage{Pool: db, log: log}
 }
 
-type record struct {
-	ID          int       `db:"id"`
-	Name        string    `db:"name"`
-	ImageURL    string    `db:"image_url"`
-	Description string    `db:"description"`
-	StartsAt    time.Time `db:"starts_at"`
-	EndsAt      time.Time `db:"ends_at"`
-	LineUp      []byte    `db:"line_up"`
-	MinAge      int       `db:"min_age"`
-
-	TicketsURL string `db:"tickets_url"`
-	Price      []byte `db:"price"`
-
-	LocationID int `db:"location_id"`
-
-	Status   string    `db:"status"`
-	UpdateAt time.Time `db:"updated_at"`
-}
-
-func (s *storage) Save(ctx context.Context, event Event) (int, error) {
-	var eventID int
-	const op = "event.storage.Save"
+func (s *Storage) Save(ctx context.Context, event Event) (string, error) {
+	var eventID string
+	const op = "event.Storage.Save"
 
 	price, err := json.Marshal(event.Price)
 	if err != nil {
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 	lineup, err := json.Marshal(event.LineUp)
 	if err != nil {
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
-	row := s.QueryRow(
-		context.Background(),
-		"INSERT INTO event (name, image_url, description, starts_at, ends_at, line_up, location_id, promoter, tickets_url, price, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id",
+	const sql = "INSERT INTO event (id, name, image_url, description, start_time, end_time, line_up, location_id, promoter, tickets_url, price, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
+	row := s.QueryRow(context.Background(), sql,
+		event.ID.String(),
 		event.Name,
-		event.ArtworkURL,
+		event.ImageURL,
 		event.Description,
-		event.StartsAt,
-		event.EndsAt,
+		event.StartTime,
+		event.EndTime,
 		lineup,
-		event.Location.ID,
+		nil,
 		event.Promoter,
 		event.TicketsURL,
 		price,
-		StatusEditing,
+		event.Status,
 	)
 	if err := row.Scan(&eventID); err != nil {
 		var pgErr *pgconn.PgError
@@ -82,10 +62,10 @@ func (s *storage) Save(ctx context.Context, event Event) (int, error) {
 			fmt.Println(pgErr.Code)    // => 42601
 			switch pgErr.Code {
 			case "42601":
-				return 0, fmt.Errorf("%s: %w", op, ErrEventExists)
+				return "", fmt.Errorf("%s: %w", op, ErrEventExists)
 			}
 		}
-		return 0, fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	return eventID, nil
