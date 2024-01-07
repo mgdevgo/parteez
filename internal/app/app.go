@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"log/slog"
 	"time"
 
@@ -14,34 +13,25 @@ import (
 	"parteez/internal/event"
 )
 
-const (
-	EnvLocal = "local"
-	EnvDev   = "dev"
-	EnvProd  = "prod"
-)
-
 type App struct {
 	HTTPServer *fiber.App
 	Storage    *pgxpool.Pool
+	log        *slog.Logger
 	// TokenManager auth.TokenManager
 	// Cron cron.Worker
 	// Cache redis.Client
 }
 
-func New(ctx context.Context, config *config.Config, log *slog.Logger) (*App, error) {
+func New(conf *config.Config, db *pgxpool.Pool, log *slog.Logger) App {
 	const op = "app.New"
-	db, _ := pgxpool.New(ctx, config.DatabaseURL)
-	if err := db.Ping(ctx); err != nil {
-		log.Error("failed to connect database: %v\n", err)
-	}
 
 	app := fiber.New(fiber.Config{
 		ServerHeader:          "Fiber",
 		AppName:               "Parteez v0.1.0",
-		DisableStartupMessage: config.AppEnv != EnvProd,
-		ReadTimeout:           config.HTTPServer.Timeout * time.Second,
-		WriteTimeout:          config.HTTPServer.Timeout * time.Second,
-		IdleTimeout:           config.HTTPServer.IdleTimeout * time.Second,
+		DisableStartupMessage: true,
+		ReadTimeout:           conf.HTTPServer.Timeout * time.Second,
+		WriteTimeout:          conf.HTTPServer.Timeout * time.Second,
+		IdleTimeout:           conf.HTTPServer.IdleTimeout * time.Second,
 	})
 	app.Use(limiter.New(), logger.New())
 
@@ -52,12 +42,7 @@ func New(ctx context.Context, config *config.Config, log *slog.Logger) (*App, er
 
 	api := app.Group("/api/v1")
 
-	events := api.Group("/events")
-	events.Get("/", func(ctx *fiber.Ctx) error { return ctx.SendStatus(fiber.StatusNotImplemented) })
-	events.Post("/", event.HandleCreateEvent(nil, nil))
-	events.Get("/search", func(ctx *fiber.Ctx) error { return ctx.SendStatus(fiber.StatusNotImplemented) })
-	events.Get("/:id", func(ctx *fiber.Ctx) error { return ctx.SendStatus(fiber.StatusNotImplemented) })
-	events.Patch("/:id", func(ctx *fiber.Ctx) error { return ctx.SendStatus(fiber.StatusNotImplemented) })
+	event.NewController(log, api, event.NewStorage(db, log)).Init()
 
 	publications := api.Group("/publications")
 	publications.Put("/events/:id", func(ctx *fiber.Ctx) error { return ctx.SendStatus(501) })
@@ -82,5 +67,9 @@ func New(ctx context.Context, config *config.Config, log *slog.Logger) (*App, er
 	api.Get("/feedback", func(ctx *fiber.Ctx) error { return ctx.SendStatus(501) })
 	api.Get("/health", func(ctx *fiber.Ctx) error { return ctx.SendStatus(501) })
 
-	return &App{HTTPServer: app, Storage: db}, nil
+	return App{
+		HTTPServer: app,
+		Storage:    db,
+		log:        log,
+	}
 }

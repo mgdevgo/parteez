@@ -2,41 +2,63 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sync/errgroup"
 
 	"parteez/internal/app"
 	"parteez/internal/config"
+	"parteez/pkg/logger"
 )
 
 func main() {
-	conf := config.MustLoad()
-
-	main, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	root, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	//done := make(chan os.Signal, 1)
 	//signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	//
 	//<-done
+	conf := config.New()
+	log := logger.New(conf.AppEnv)
 
-	//logger := logger.New()
+	log.Info("Starting application",
+		slog.String("Name", "Parteez"),
+		slog.String("Version", "0.1.0"),
+		slog.String("ENV", conf.AppEnv),
+	)
 
-	application, _ := app.New(main, conf)
+	db, err := pgxpool.New(context.TODO(), conf.DatabaseURL)
+	if err != nil {
+		log.Error("Can not initialize database connection pool",
+			slog.String("URL", conf.DatabaseURL),
+			slog.String("Error", err.Error()),
+		)
+		os.Exit(1)
+	}
+	if err := db.Ping(context.TODO()); err != nil {
+		log.Error("Failed to ping database",
+			slog.String("URL", conf.DatabaseURL),
+			slog.String("Error", err.Error()),
+		)
+		os.Exit(1)
+	}
 
-	g, run := errgroup.WithContext(main)
+	log.Info("Database connection OK")
+
+	application := app.New(conf, db, log)
+
+	g, run := errgroup.WithContext(root)
 	g.Go(func() error {
-		const op = "HTTPServer.Listen"
-		log.Printf("API server listening at: %s \n", conf.HTTPServer.Address)
+		log.Info("HTTPServer started accepting connections", slog.String("Address", conf.HTTPServer.Address))
 
-		if err := application.HTTPServer.Listen("123"); err != nil {
-			log.Printf("%s: %s", op, err.Error())
-			return fmt.Errorf("%s: %w", op, err)
+		if err := application.HTTPServer.Listen(conf.HTTPServer.Address); err != nil {
+			log.Error("HTTPServer failed to listen", slog.String("Error", err.Error()))
+			return err
 		}
 
 		return nil
@@ -44,33 +66,27 @@ func main() {
 
 	g.Go(func() error {
 		<-run.Done()
-
-		// TODO: move timeout to config
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		if err := application.HTTPServer.ShutdownWithContext(ctx); err != nil {
-			const op = "HTTPServer.ShutdownWithContext"
-			log.Printf("%s: %s", op, err.Error())
-
-			return fmt.Errorf("%s: %w", op, err)
+			log.Error("HTTPServer stopped with error", slog.String("Error", err.Error()))
+			return err
 		}
-
-		log.Println("HTTPServer stopped")
+		log.Info("HTTPServer stopped")
 		return nil
 	})
+
 	g.Go(func() error {
 		<-run.Done()
 		application.Storage.Close()
-		log.Println("Storage closed")
-
+		log.Info("Database connections closed")
 		return nil
 	})
 
 	if err := g.Wait(); err != nil {
-		log.Printf("Application stopped with err: %v\n", err.Error())
+		log.Error("Application stopped with error", slog.String("Error", err.Error()))
 	} else {
-		log.Println("Application stopped")
+		log.Info("Application stopped")
 	}
-
 }
