@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	tx "github.com/avito-tech/go-transaction-manager/pgxv5"
+	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -18,13 +19,13 @@ var (
 )
 
 type Storage struct {
-	*pgxpool.Pool
+	db  *pgxpool.Pool
 	log *slog.Logger
 	tx  tx.CtxGetter
 }
 
 func NewStorage(db *pgxpool.Pool, log *slog.Logger) *Storage {
-	return &Storage{Pool: db, log: log}
+	return &Storage{db: db, log: log}
 }
 
 func (s *Storage) Save(ctx context.Context, event Event) (string, error) {
@@ -35,20 +36,20 @@ func (s *Storage) Save(ctx context.Context, event Event) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
-	lineup, err := json.Marshal(event.LineUp)
+	lineupb, err := json.Marshal(event.LineUp)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	const sql = "INSERT INTO event (id, name, image_url, description, start_time, end_time, line_up, location_id, promoter, tickets_url, price, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
-	row := s.QueryRow(context.Background(), sql,
+	row := s.db.QueryRow(context.Background(), sql,
 		event.ID.String(),
 		event.Name,
 		event.ImageURL,
 		event.Description,
 		event.StartTime,
 		event.EndTime,
-		lineup,
+		lineupb,
 		nil,
 		event.Promoter,
 		event.TicketsURL,
@@ -69,4 +70,32 @@ func (s *Storage) Save(ctx context.Context, event Event) (string, error) {
 	}
 
 	return eventID, nil
+}
+
+func (s *Storage) Get(ctx context.Context, ids []string) ([]Event, error) {
+	empty := make([]Event, 0)
+	const query = "SELECT id, name, line_up, created_at FROM event WHERE id = ANY($1)"
+	//rows, err := s.db.Query(ctx, query, ids)
+	//if err != nil {
+	//	return empty, err
+	//}
+	//defer rows.Close()
+	//
+	//for rows.Next() {
+	//	var event Event
+	//	err = rows.Scan(&event.ID, &event.Name)
+	//	if err != nil {
+	//		s.log.Error("Row scan", slog.String("Error", err.Error()))
+	//	}
+	//	events = append(events, event)
+	//}
+
+	var err error
+	events := make([]Event, 0)
+	err = pgxscan.Select(ctx, s.db, &events, query, ids)
+	if err != nil {
+		return empty, err
+	}
+
+	return events, nil
 }

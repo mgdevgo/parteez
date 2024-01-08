@@ -39,7 +39,7 @@ type Event struct {
 }
 
 type Artist struct {
-	ID         int
-	Name       string
-	ProfileURL string
+	ID         int    `json:"id,omitempty"`
+	Name       string `json:"name"`
+	ProfileURL string `json:"profile_url,omitempty"`
 }

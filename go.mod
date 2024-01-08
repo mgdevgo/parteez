@@ -7,6 +7,7 @@ toolchain go1.21.4
 require (
 	github.com/avito-tech/go-transaction-manager v1.4.1
 	github.com/fatih/color v1.16.0
+	github.com/georgysavva/scany/v2 v2.1.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gocolly/colly v1.2.0
 	github.com/gofiber/fiber/v2 v2.52.0
@@ -53,7 +54,6 @@ require (
 	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
-	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	github.com/tinylib/msgp v1.1.9 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect

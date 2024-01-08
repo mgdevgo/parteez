@@ -3,6 +3,7 @@ package event
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -25,11 +26,47 @@ func NewController(log *slog.Logger, router fiber.Router, s *Storage) *Controlle
 
 func (c *Controller) Init() {
 	events := c.router.Group("/events")
-	events.Get("/", func(ctx *fiber.Ctx) error { return ctx.SendStatus(fiber.StatusNotImplemented) })
+	events.Get("/", handleEventGet(c.log, c.storage))
 	events.Post("/", handleEventCreation(c.log, c.storage))
 	events.Get("/search", func(ctx *fiber.Ctx) error { return ctx.SendStatus(fiber.StatusNotImplemented) })
 	events.Get("/:id", func(ctx *fiber.Ctx) error { return ctx.SendStatus(fiber.StatusNotImplemented) })
 	events.Patch("/:id", func(ctx *fiber.Ctx) error { return ctx.SendStatus(fiber.StatusNotImplemented) })
+}
+
+type EventGetter interface {
+	Get(ctx context.Context, eventIDs []string) ([]Event, error)
+}
+
+type EventResponse struct {
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	UpdateTime time.Time `json:"update_time"`
+}
+
+func handleEventGet(log *slog.Logger, eventgetter EventGetter) func(ctx *fiber.Ctx) error {
+	return func(ctx *fiber.Ctx) error {
+		ids := ctx.Query("ids")
+		idsArray := strings.Split(strings.Trim(ids, "[]"), ",")
+
+		events, err := eventgetter.Get(ctx.Context(), idsArray)
+		if err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		response := make([]EventResponse, 0, len(events))
+		for _, e := range events {
+			item := EventResponse{
+				ID:         e.ID.String(),
+				Name:       e.Name,
+				UpdateTime: e.UpdatedAt,
+			}
+			response = append(response, item)
+		}
+
+		return ctx.JSON(response)
+	}
 }
 
 type eventCreationRequest struct {
@@ -112,9 +149,9 @@ func handleEventCreation(log *slog.Logger, eventSaver eventSaver) func(c *fiber.
 }
 
 func lineup(rawData map[string][]string) map[string][]Artist {
-	l := make(map[string][]Artist, len(rawData))
+	l := make(map[string][]Artist)
 	for i, artists := range rawData {
-		stage := make([]Artist, len(artists))
+		stage := make([]Artist, 0, len(artists))
 		for _, name := range artists {
 			stage = append(stage, Artist{Name: name})
 		}
