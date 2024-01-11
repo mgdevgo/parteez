@@ -3,6 +3,7 @@ CREATE TABLE location
 (
     id        serial PRIMARY KEY,
     name      varchar(64) UNIQUE NOT NULL,
+    description varchar(256),
     type      location_type,
     address   text,
     latitude  int,
