@@ -23,15 +23,15 @@ type App struct {
 }
 
 func New(conf *config.Config, db *pgxpool.Pool, log *slog.Logger) App {
-	const op = "app.New"
+	storage := NewStorage(db, log)
 
 	app := fiber.New(fiber.Config{
-		ServerHeader:          "Fiber",
-		AppName:               "Parteez v0.1.0",
-		DisableStartupMessage: true,
-		ReadTimeout:           conf.HTTPServer.Timeout * time.Second,
-		WriteTimeout:          conf.HTTPServer.Timeout * time.Second,
-		IdleTimeout:           conf.HTTPServer.IdleTimeout * time.Second,
+		ServerHeader: "Fiber",
+		AppName:      "Parteez v0.1.0",
+		//DisableStartupMessage: false,
+		ReadTimeout:  conf.HTTPServer.Timeout * time.Second,
+		WriteTimeout: conf.HTTPServer.Timeout * time.Second,
+		IdleTimeout:  conf.HTTPServer.IdleTimeout * time.Second,
 	})
 	app.Use(limiter.New(), logger.New())
 
@@ -42,7 +42,7 @@ func New(conf *config.Config, db *pgxpool.Pool, log *slog.Logger) App {
 
 	api := app.Group("/api/v1")
 
-	event.NewController(log, api, event.NewStorage(db, log)).Init()
+	event.EventRouter(log, api, storage.events)
 
 	publications := api.Group("/publications")
 	publications.Put("/events/:id", func(ctx *fiber.Ctx) error { return ctx.SendStatus(501) })

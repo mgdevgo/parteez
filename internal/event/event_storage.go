@@ -24,7 +24,7 @@ type Storage struct {
 	tx  tx.CtxGetter
 }
 
-func NewStorage(db *pgxpool.Pool, log *slog.Logger) *Storage {
+func EventStorage(db *pgxpool.Pool, log *slog.Logger) *Storage {
 	return &Storage{db: db, log: log}
 }
 
@@ -36,7 +36,7 @@ func (s *Storage) Save(ctx context.Context, event Event) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
-	lineupb, err := json.Marshal(event.LineUp)
+	lineUpBytes, err := json.Marshal(event.LineUp)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
@@ -49,7 +49,7 @@ func (s *Storage) Save(ctx context.Context, event Event) (string, error) {
 		event.Description,
 		event.StartTime,
 		event.EndTime,
-		lineupb,
+		lineUpBytes,
 		nil,
 		event.Promoter,
 		event.TicketsURL,

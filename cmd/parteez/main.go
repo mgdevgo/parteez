@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -19,61 +20,44 @@ import (
 func main() {
 	root, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	//done := make(chan os.Signal, 1)
-	//signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	//
-	//<-done
+
 	conf := config.New()
 	log := logger.New(conf.AppEnv)
 
-	log.Info("Starting application",
-		slog.String("Name", "Parteez"),
-		slog.String("Version", "0.1.0"),
-		slog.String("ENV", conf.AppEnv),
-	)
-
-	db, err := pgxpool.New(context.TODO(), conf.DatabaseURL)
+	pool, err := pgxpool.New(root, conf.DatabaseURL)
 	if err != nil {
-		log.Error("Can not initialize database connection pool",
-			slog.String("URL", conf.DatabaseURL),
-			slog.String("Error", err.Error()),
-		)
-		os.Exit(1)
-	}
-	if err := db.Ping(context.TODO()); err != nil {
-		log.Error("Failed to ping database",
-			slog.String("URL", conf.DatabaseURL),
-			slog.String("Error", err.Error()),
-		)
-		os.Exit(1)
+		panic(fmt.Errorf("pgxpool.New: %w", err))
 	}
 
-	log.Info("Database connection OK")
+	ctx, cancel := context.WithTimeout(root, time.Second*2)
+	defer cancel()
+	if err := pool.Ping(ctx); err != nil {
+		panic(fmt.Errorf("ping: %w", err))
+	}
 
-	application := app.New(conf, db, log)
+	log.Info("Connected to database", slog.String("connection_url", conf.DatabaseURL))
+
+	application := app.New(conf, pool, log)
 
 	g, run := errgroup.WithContext(root)
 	g.Go(func() error {
-		log.Info("HTTPServer started accepting connections", slog.String("Address", conf.HTTPServer.Address))
-
 		if err := application.HTTPServer.Listen(conf.HTTPServer.Address); err != nil {
-			log.Error("HTTPServer failed to listen", slog.String("Error", err.Error()))
+			log.Error("HTTP server listen error", slog.String("error", err.Error()))
 			return err
 		}
-
 		return nil
 	})
 
 	g.Go(func() error {
 		<-run.Done()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 
 		if err := application.HTTPServer.ShutdownWithContext(ctx); err != nil {
-			log.Error("HTTPServer stopped with error", slog.String("Error", err.Error()))
+			log.Error("Failed to shutdown HTTP server", slog.String("error", err.Error()))
 			return err
 		}
-		log.Info("HTTPServer stopped")
+		log.Info("HTTP server stopped")
 		return nil
 	})
 
@@ -85,8 +69,8 @@ func main() {
 	})
 
 	if err := g.Wait(); err != nil {
-		log.Error("Application stopped with error", slog.String("Error", err.Error()))
-	} else {
-		log.Info("Application stopped")
+		log.Error("Application stopped with error", slog.String("error", err.Error()))
 	}
+
+	log.Info("Application stopped")
 }

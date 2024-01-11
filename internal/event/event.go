@@ -14,16 +14,24 @@ const (
 	StatusPublished Status = "published"
 )
 
+const DefaultMinAge = 18
+
+type LineUp struct {
+	Name      string `json:"name"`
+	StartTime string `json:"start_time,omitempty"`
+	Live      bool   `json:"live,omitempty"`
+}
+
 type Event struct {
-	ID          ulid.ULID           `json:"id"`
-	Name        string              `json:"name"`
-	ImageURL    string              `json:"image_url"`
-	Description string              `json:"description"`
-	Genres      []string            `json:"genres"`
-	LineUp      map[string][]Artist `json:"line_up"`
-	StartTime   time.Time           `json:"start_time"`
-	EndTime     time.Time           `json:"end_time"`
-	MinAge      int                 `json:"min_age"`
+	ID          ulid.ULID         `json:"id"`
+	Name        string            `json:"name"`
+	ImageURL    string            `json:"image_url"`
+	Description string            `json:"description"`
+	Genres      []string          `json:"genres"`
+	LineUp      map[string]LineUp `json:"line_up"`
+	StartTime   time.Time         `json:"start_time"`
+	EndTime     time.Time         `json:"end_time"`
+	MinAge      int               `json:"min_age"`
 
 	TicketsURL string         `json:"tickets_url"`
 	Price      map[string]int `json:"price"`
