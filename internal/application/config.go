@@ -1,4 +1,4 @@
-package config
+package application
 
 import (
 	"log"
@@ -23,11 +23,31 @@ type HTTPServer struct {
 	IdleTimeout time.Duration `koanf:"idle_timeout"`
 }
 
-func New() *Config {
+// type Options struct {
+//	Providers []koanf.Provider
+// }
+//
+// var ConfigDefault = Config{}
+//
+// func Load(providers ...koanf.Provider) Config {
+//	if len(providers) <= 0 {
+//		return ConfigDefault
+//	}
+//
+//	k := koanf.New(".")
+// }
+
+func newConfig() *Config {
 	k := koanf.New(".")
 
+	// //p := env.Provider("PARTEEZ_")
+	// k.Load(env.Provider("MYVAR_", ".", func(s string) string {
+	//	return strings.Replace(strings.ToLower(
+	//		strings.TrimPrefix(s, "MYVAR_")), "_", ".", -1)
+	// }), nil)
+
 	if err := k.Load(file.Provider(".env"), dotenv.ParserEnv("", ".", func(s string) string {
-		//return strings.Replace(strings.ToLower(strings.TrimPrefix(s, "")), "_", ".", -1)
+		// return strings.Replace(strings.ToLower(strings.TrimPrefix(s, "")), "_", ".", -1)
 		return strings.ToLower(s)
 	})); err != nil {
 		log.Fatalf("cannot read config: %s", err)
