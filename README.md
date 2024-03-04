@@ -1,4 +1,4 @@
-# Parteez
+# IdiTusi API
 
 ## Getting started
 
