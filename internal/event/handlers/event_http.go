@@ -1,7 +1,8 @@
-package event
+package handlers
 
 import (
 	"context"
+	"iditusi/internal/event"
 	"log/slog"
 	"strings"
 	"time"
@@ -12,7 +13,7 @@ import (
 
 type EventRouterConfig struct{}
 
-func EventRouter(log *slog.Logger, router fiber.Router, storage *Storage) {
+func EventRouter(log *slog.Logger, router fiber.Router, storage event.Storage) {
 	events := router.Group("/events")
 	events.Get("/", handleGetEvent(log, storage))
 	events.Post("/", handleCreateEvent(log, storage))
@@ -22,7 +23,7 @@ func EventRouter(log *slog.Logger, router fiber.Router, storage *Storage) {
 }
 
 type EventGetter interface {
-	Get(ctx context.Context, eventIDs []string) ([]Event, error)
+	Get(ctx context.Context, eventIDs []string) ([]event.Event, error)
 }
 
 type EventResponse struct {
@@ -58,14 +59,14 @@ func handleGetEvent(log *slog.Logger, eventgetter EventGetter) func(ctx *fiber.C
 }
 
 type EventCreationRequest struct {
-	Name        string            `json:"name"`
-	ImageURL    string            `json:"image_url,omitempty"`
-	Description string            `json:"description,omitempty"`
-	Genres      []string          `json:"genres,omitempty"`
-	LineUp      map[string]LineUp `json:"line_up,omitempty"`
-	StartTime   time.Time         `json:"start_time,omitempty"`
-	EndTime     time.Time         `json:"end_time,omitempty"`
-	MinAge      int               `json:"min_age,omitempty"`
+	Name        string                  `json:"name"`
+	ImageURL    string                  `json:"image_url,omitempty"`
+	Description string                  `json:"description,omitempty"`
+	Genres      []string                `json:"genres,omitempty"`
+	LineUp      map[string]event.LineUp `json:"line_up,omitempty"`
+	StartTime   time.Time               `json:"start_time,omitempty"`
+	EndTime     time.Time               `json:"end_time,omitempty"`
+	MinAge      int                     `json:"min_age,omitempty"`
 
 	TicketsURL string         `json:"tickets_url,omitempty"`
 	Price      map[string]int `json:"price,omitempty"`
@@ -79,7 +80,7 @@ func (r EventCreationRequest) Validate() error {
 }
 
 type eventSaver interface {
-	Save(ctx context.Context, event Event) (string, error)
+	Save(ctx context.Context, event event.Event) (string, error)
 }
 
 func handleCreateEvent(log *slog.Logger, eventSaver eventSaver) func(c *fiber.Ctx) error {
@@ -105,10 +106,10 @@ func handleCreateEvent(log *slog.Logger, eventSaver eventSaver) func(c *fiber.Ct
 		}
 
 		// TODO: locationID.isValid()
-		event := Event{
+		event := event.Event{
 			ID:        ulid.Make(),
 			Name:      request.Name,
-			Status:    StatusEditing,
+			Status:    event.StatusEditing,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 
@@ -118,7 +119,7 @@ func handleCreateEvent(log *slog.Logger, eventSaver eventSaver) func(c *fiber.Ct
 			LineUp:      request.LineUp,
 			StartTime:   request.StartTime,
 			EndTime:     request.EndTime,
-			MinAge:      DefaultMinAge,
+			MinAge:      event.DefaultMinAge,
 			TicketsURL:  request.TicketsURL,
 			Price:       request.Price,
 			LocationID:  request.LocationID,

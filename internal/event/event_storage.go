@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
+	"strings"
 
-	tx "github.com/avito-tech/go-transaction-manager/pgxv5"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,61 +17,104 @@ var (
 	ErrEventExists   = errors.New("event exists")
 )
 
-type Storage struct {
-	db  *pgxpool.Pool
-	log *slog.Logger
-	tx  tx.CtxGetter
+type EventStorage interface {
+	Create(event Event) (string, error)
+	Get(ids []string) ([]Event, error)
+	Update(id string, options map[string]any) (Event, error)
+	Delete(id string) error
+	Transaction() (int, error)
 }
 
-func EventStorage(db *pgxpool.Pool, log *slog.Logger) *Storage {
-	return &Storage{db: db, log: log}
+type postgresEventStorage struct {
+	eventsTable string
+	driver      *pgxpool.Pool
 }
 
-func (s *Storage) Save(ctx context.Context, event Event) (string, error) {
-	var eventID string
-	const op = "event.Storage.Save"
-
-	price, err := json.Marshal(event.Price)
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
+func NewEventStorage(db *pgxpool.Pool) *postgresEventStorage {
+	return &postgresEventStorage{
+		eventsTable: "event",
+		driver:      db,
 	}
-	lineUpBytes, err := json.Marshal(event.LineUp)
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
-	}
+}
 
-	const sql = "INSERT INTO event (id, name, image_url, description, start_time, end_time, line_up, location_id, promoter, tickets_url, price, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id"
-	row := s.db.QueryRow(context.Background(), sql,
-		event.ID.String(),
-		event.Name,
-		event.ImageURL,
-		event.Description,
-		event.StartTime,
-		event.EndTime,
-		lineUpBytes,
-		nil,
-		event.Promoter,
-		event.TicketsURL,
-		price,
-		event.Status,
-	)
-	if err := row.Scan(&eventID); err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			fmt.Println(pgErr.Message) // => syntax error at end of input
-			fmt.Println(pgErr.Code)    // => 42601
-			switch pgErr.Code {
-			case "42601":
-				return "", fmt.Errorf("%s: %w", op, ErrEventExists)
+func (s *postgresEventStorage) Create(event Event) (string, error) {
+	const sql = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"
+
+	const maxNumberOfFields = 12
+	fields := make([]string, 0, maxNumberOfFields)
+	values := make([]string, 0, maxNumberOfFields)
+	args := make([]any, 0, maxNumberOfFields)
+	count := 0
+
+	null := func() bool { return true }
+	addField := func(name string, value any, isNull ...bool) {
+		count++
+		fields = append(fields, name)
+
+		placeholder := "$%d"
+		if name == "location_id" {
+			placeholder = "(SELECT id FROM location WHERE name = $%d)"
+		}
+
+		values = append(values, fmt.Sprintf(placeholder, count))
+		if len(isNull) > 0 {
+			if v := fmt.Sprintf("%v", value); v == "" || v == "0001-01-01 00:00:00 +0000 UTC" {
+				value = nil
 			}
 		}
-		return "", fmt.Errorf("%s: %w", op, err)
+
+		args = append(args, value)
+	}
+
+	addField("id", event.ID)
+	addField("name", event.Name)
+	addField("description", event.Description, null())
+	addField("image_url", event.ImageURL, null())
+	addField("music_genres", strings.Join(event.MusicGenres, ","), null())
+
+	lbytes, err := json.Marshal(event.LineUp)
+	if err != nil {
+		return "", err
+	}
+	addField("line_up", string(lbytes), null())
+
+	addField("start_time", event.StartTime, null())
+	addField("end_time", event.EndTime, null())
+
+	pbytes, err := json.Marshal(event.Price)
+	if err != nil {
+		return "", err
+	}
+	addField("price", string(pbytes), null())
+	addField("tickets_url", event.TicketsURL, null())
+	addField("min_age", event.MinAge)
+
+	addField("promoter", event.Promoter, null())
+	addField("location_id", event.LocationID, null())
+
+	addField("is_public", event.IsPublic)
+
+	query := fmt.Sprintf(sql, s.eventsTable, strings.Join(fields, ", "), strings.Join(values, ", "))
+
+	fmt.Println(query)
+	result := s.driver.QueryRow(context.Background(), query, args...)
+
+	var eventID string
+	if err := result.Scan(&eventID); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case "23505":
+				return "", ErrEventExists
+			}
+		}
+		return "", err
 	}
 
 	return eventID, nil
 }
 
-func (s *Storage) Get(ctx context.Context, ids []string) ([]Event, error) {
+func (s *postgresEventStorage) Get(ids []string) ([]Event, error) {
 	empty := make([]Event, 0)
 	const query = "SELECT id, name, line_up, created_at FROM event WHERE id = ANY($1)"
 	//rows, err := s.db.Query(ctx, query, ids)
@@ -92,10 +134,25 @@ func (s *Storage) Get(ctx context.Context, ids []string) ([]Event, error) {
 
 	var err error
 	events := make([]Event, 0)
-	err = pgxscan.Select(ctx, s.db, &events, query, ids)
+	err = pgxscan.Select(context.TODO(), s.driver, &events, query, ids)
 	if err != nil {
 		return empty, err
 	}
 
 	return events, nil
+}
+
+func (s *postgresEventStorage) Update(id string, options map[string]any) (Event, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *postgresEventStorage) Delete(id string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *postgresEventStorage) Transaction() (int, error) {
+	//TODO implement me
+	panic("implement me")
 }

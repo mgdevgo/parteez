@@ -2,8 +2,6 @@ package event
 
 import (
 	"time"
-
-	"github.com/oklog/ulid/v2"
 )
 
 type Status string
@@ -23,25 +21,25 @@ type LineUp struct {
 }
 
 type Event struct {
-	ID          ulid.ULID         `json:"id"`
-	Name        string            `json:"name"`
-	ImageURL    string            `json:"image_url"`
-	Description string            `json:"description"`
-	Genres      []string          `json:"genres"`
-	LineUp      map[string]LineUp `json:"line_up"`
-	StartTime   time.Time         `json:"start_time"`
-	EndTime     time.Time         `json:"end_time"`
-	MinAge      int               `json:"min_age"`
+	ID          string              `json:"id"`
+	Name        string              `json:"name"`
+	ImageURL    string              `json:"image_url"`
+	Description string              `json:"description"`
+	MusicGenres []string            `json:"genres"`
+	LineUp      map[string][]LineUp `json:"line_up"`
 
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+
+	MinAge     int            `json:"min_age"`
 	TicketsURL string         `json:"tickets_url"`
 	Price      map[string]int `json:"price"`
 
-	Interested int `json:"interested"`
-
-	LocationID int    `json:"location_id"`
+	LocationID string `json:"-"`
 	Promoter   string `json:"promoter"`
 
-	Status    Status    `json:"status"`
+	IsPublic bool `json:"is_public"`
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
