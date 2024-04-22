@@ -1,26 +1,37 @@
--- CREATE TYPE event_status AS ENUM ('editing','review', 'published');
-
 CREATE TABLE event
 (
-    id           char(21)    NOT NULL PRIMARY KEY,
-    name         varchar(64) NOT NULL UNIQUE,
-    description  text,
-    image_url    text,
-    music_genres text,
-    line_up      json,
-    start_time   timestamptz,
-    end_time     timestamptz,
-    tickets_url  text,
-    price        json,
-    min_age      int,
-    promoter     varchar(128),
-    location_id  char(10) REFERENCES location (id),
-    is_public    boolean      NOT NULL,
-    updated_at   timestamp    NOT NULL DEFAULT now(),
-    created_at   timestamp    NOT NULL DEFAULT now()
+    id              serial PRIMARY KEY,
+    name            varchar(64)  NOT NULL,
+    description     text         NOT NULL,
+    artwork_url     text         NOT NULL,
+    genre           text         NOT NULL,
+    start_date      timestamptz  NOT NULL,
+    end_date        timestamptz  NOT NULL,
+    line_up         jsonb        NOT NULL,
+    age_restriction int          NOT NULL,
+    price           jsonb        NOT NULL,
+    tickets_url     text         NOT NULL,
+    promoter        varchar(128) NOT NULL,
+    location_id     int          NOT NULL REFERENCES location (id) DEFAULT -1,
+    is_public       boolean      NOT NULL,
+    updated_at      timestamp    NOT NULL                          DEFAULT now(),
+    created_at      timestamp    NOT NULL                          DEFAULT now(),
+    UNIQUE (name, start_time)
 );
 
+-- CREATE TABLE line_up
+-- (
+--     event_id    int          NOT NULL REFERENCES event (id),
+--     artist_name varchar(128) NOT NULL,
+--     start_time  char(5)      NOT NULL,
+--     live        boolean      NOT NULL,
+--     stage_id    int          NOT NULL REFERENCES location_stage (id) DEFAULT 1,
+--     PRIMARY KEY (event_id, artist_name),
+-- )
+
+
 -- CREATE INDEX "event_start_time_idx" on event (start_time);
+-- CREATE TYPE event_status AS ENUM ('editing','review', 'published');
 -- CREATE TABLE event_reviews
 -- (
 --     event_id    char(26) REFERENCES event (id)              NOT NULL,
