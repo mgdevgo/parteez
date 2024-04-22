@@ -8,3 +8,4 @@ build/
 .bin/
 
 cmd/test/
+/pkg/event/parser/*.json
