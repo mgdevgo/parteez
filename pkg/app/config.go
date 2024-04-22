@@ -1,4 +1,4 @@
-package application
+package app
 
 import (
 	"log"
@@ -37,7 +37,7 @@ type HTTPServer struct {
 //	k := koanf.New(".")
 // }
 
-func newConfig() *Config {
+func loadConfig() *Config {
 	k := koanf.New(".")
 
 	// //p := env.Provider("PARTEEZ_")
