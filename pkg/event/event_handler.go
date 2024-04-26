@@ -1,8 +1,6 @@
 package event
 
 import (
-	"strconv"
-
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -54,22 +52,16 @@ func (h *handler) RegisterRoutes(router fiber.Router) {
 }
 
 func (h *handler) ListEvents(ctx *fiber.Ctx) error {
-	limit := ctx.Query("limit")
-	offset := ctx.Query("offset")
-
-	var request ListEventsRequest
-	var err error
-
-	request.Limit, err = strconv.Atoi(limit)
-	if err != nil {
-		return err
-	}
-	request.Offset, err = strconv.Atoi(offset)
-	if err != nil {
-		return err
+	request := ListEventsRequest{
+		ctx.QueryInt("limit", 5),
+		ctx.QueryInt("offset", 0),
+		// ctx.QuieryString("fromDate", ""
 	}
 
 	response, err := h.eventService.ListEvents(request)
+	if err != nil {
+		return err
+	}
 	// if err != nil {
 	// 	return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 	// 		"error": err.Error(),
