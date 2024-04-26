@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"iditusi/pkg/sqlutils"
+	"iditusi/pkg/shared/storage"
 
 	transaction "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 	"github.com/georgysavva/scany/v2/pgxscan"
@@ -30,40 +30,41 @@ type LocationStorage interface {
 	Delete(id int) error
 }
 
-var _ LocationStorage = (*storage)(nil)
+var _ LocationStorage = (*postgres)(nil)
 
 var ErrAlreadyExist = errors.New("location already exist")
 var ErrNotFound = errors.New("location not found")
 
-type storage struct {
+type postgres struct {
 	driver    *pgxpool.Pool
 	txManager *transaction.CtxGetter
 }
 
-func NewStorage(db *pgxpool.Pool) *storage {
-	return &storage{
+func NewStorage(db *pgxpool.Pool) *postgres {
+	return &postgres{
 		driver: db,
 	}
 }
 
-func (s *storage) Save(location Location) (Location, error) {
-	builder := sqlutils.NewFieldsBuilder()
-	builder.AddField("name", location.Name)
-	builder.AddField("location_type_id", location.Type, "(SELECT id FROM "+_LOCATION_TYPE_TABLE+" WHERE name = $%d)")
-	builder.AddField("description", location.Description)
-	builder.AddField("artwork_url", location.ArtworkURL)
-	builder.AddField("stages", strings.Join(location.Stages, ","))
-	builder.AddField("address", location.Address)
-	builder.AddField("metro_stations", strings.Join(location.MetroStations, ","))
-	builder.AddField("is_public", location.IsPublic)
+func (s *postgres) Save(location Location) (Location, error) {
+	fields := storage.Fields{}
+	fields.AddField("name", location.Name)
+	fields.AddField("location_type_id", location.Type, "(SELECT id FROM "+_LOCATION_TYPE_TABLE+" WHERE name = $%d)")
+	fields.AddField("description", location.Description)
+	fields.AddField("artwork_url", location.ArtworkURL)
+	fields.AddField("stages", strings.Join(location.Stages, ","))
+	fields.AddField("address", location.Address)
+	fields.AddField("metro_stations", strings.Join(location.MetroStations, ","))
+	fields.AddField("is_public", location.IsPublic)
 	timestamp := time.Now()
-	builder.AddField("created_at", timestamp)
-	builder.AddField("updated_at", timestamp)
+	fields.AddField("created_at", timestamp)
+	fields.AddField("updated_at", timestamp)
 
+	fieldNames, values, args := fields.Build()
 	const sql = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"
-	query := fmt.Sprintf(sql, _LOCATION_TABLE, builder.Fields(), builder.Values())
+	query := fmt.Sprintf(sql, _LOCATION_TABLE, fieldNames, values)
 
-	result := s.driver.QueryRow(context.Background(), query, builder.Args()...)
+	result := s.driver.QueryRow(context.Background(), query, args...)
 
 	if err := result.Scan(&location.ID); err != nil {
 		var pgerr *pgconn.PgError
@@ -78,7 +79,7 @@ func (s *storage) Save(location Location) (Location, error) {
 	return location, nil
 }
 
-func (s *storage) SaveAll(locations []Location) error {
+func (s *postgres) SaveAll(locations []Location) error {
 	ctx := context.TODO()
 
 	// tx := s.txManager.DefaultTrOrDB(ctx, s.driver)
@@ -89,24 +90,25 @@ func (s *storage) SaveAll(locations []Location) error {
 	}
 
 	for _, location := range locations {
-		builder := sqlutils.NewFieldsBuilder()
-		builder.AddField("id", location.ID)
-		builder.AddField("name", location.Name)
-		builder.AddField("location_type_id", location.Type, "(SELECT id FROM "+_LOCATION_TYPE_TABLE+" WHERE name = $%d)")
-		builder.AddField("description", location.Description)
-		builder.AddField("artwork_url", location.ArtworkURL)
-		builder.AddField("stages", strings.Join(location.Stages, ","))
-		builder.AddField("address", location.Address)
-		builder.AddField("metro_stations", strings.Join(location.MetroStations, ","))
-		builder.AddField("is_public", location.IsPublic)
+		fields := storage.Fields{}
+		fields.AddField("id", location.ID)
+		fields.AddField("name", location.Name)
+		fields.AddField("location_type_id", location.Type, "(SELECT id FROM "+_LOCATION_TYPE_TABLE+" WHERE name = $%d)")
+		fields.AddField("description", location.Description)
+		fields.AddField("artwork_url", location.ArtworkURL)
+		fields.AddField("stages", strings.Join(location.Stages, ","))
+		fields.AddField("address", location.Address)
+		fields.AddField("metro_stations", strings.Join(location.MetroStations, ","))
+		fields.AddField("is_public", location.IsPublic)
 		timestamp := time.Now()
-		builder.AddField("created_at", timestamp)
-		builder.AddField("updated_at", timestamp)
+		fields.AddField("created_at", timestamp)
+		fields.AddField("updated_at", timestamp)
 
+		fieldNames, values, args := fields.Build()
 		const sql = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"
-		query := fmt.Sprintf(sql, _LOCATION_TABLE, builder.Fields(), builder.Values())
+		query := fmt.Sprintf(sql, _LOCATION_TABLE, fieldNames, values)
 
-		row := tx.QueryRow(context.Background(), query, builder.Args()...)
+		row := tx.QueryRow(context.Background(), query, args...)
 
 		var id int
 
@@ -132,7 +134,7 @@ type findOption struct {
 	Value any
 }
 
-func (s *storage) findBy(option findOption) (Location, error) {
+func (s *postgres) findBy(option findOption) (Location, error) {
 	if option.Name != "name" && option.Name != "id" {
 		fmt.Errorf("unknown option: name=%s", option)
 	}
@@ -180,21 +182,21 @@ WHERE l.%s = $1`
 
 	return result, nil
 }
-func (s *storage) FindByID(id int) (Location, error) {
+func (s *postgres) FindByID(id int) (Location, error) {
 	return s.findBy(findOption{
 		Name:  "id",
 		Value: id,
 	})
 }
 
-func (s *storage) FindByName(name string) (Location, error) {
+func (s *postgres) FindByName(name string) (Location, error) {
 	return s.findBy(findOption{
 		Name:  "name",
 		Value: name,
 	})
 }
 
-func (s *storage) FindAll() ([]Location, error) {
+func (s *postgres) FindAll() ([]Location, error) {
 	type record struct {
 		ID            int
 		Name          string
@@ -239,7 +241,7 @@ WHERE l.id > 0`
 	return locations, nil
 }
 
-func (s *storage) Delete(id int) error {
+func (s *postgres) Delete(id int) error {
 	_, err := s.driver.Exec(context.TODO(), fmt.Sprintf("DELETE FROM %s WHERE id = $1", _LOCATION_TABLE), id)
 	return err
 }

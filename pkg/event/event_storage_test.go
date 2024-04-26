@@ -11,7 +11,7 @@ func TestStorageFind(t *testing.T) {
 	type testCase struct {
 		Name string
 
-		Storage *storage
+		Storage *postgres
 
 		Options FindOptions
 
@@ -45,7 +45,7 @@ func Test_storage_Save(t *testing.T) {
 	type testCase struct {
 		Name string
 
-		Storage *storage
+		Storage *postgres
 
 		Event Event
 

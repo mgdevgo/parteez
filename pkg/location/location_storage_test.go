@@ -173,7 +173,7 @@ func Test_storage_BatchSave(t *testing.T) {
 	type testCase struct {
 		Name string
 
-		Storage *storage
+		Storage *postgres
 
 		Locations []Location
 

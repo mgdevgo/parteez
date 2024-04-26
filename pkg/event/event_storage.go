@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"iditusi/pkg/sqlutils"
+	"iditusi/pkg/shared/storage"
 
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -26,15 +26,15 @@ type EventStorage interface {
 	Writer
 }
 
-type storage struct {
+type postgres struct {
 	driver *pgxpool.Pool
 	// cache cache.Cache
 }
 
-var _ EventStorage = (*storage)(nil)
+var _ EventStorage = (*postgres)(nil)
 
-func NewStorage(db *pgxpool.Pool) *storage {
-	return &storage{
+func NewStorage(db *pgxpool.Pool) *postgres {
+	return &postgres{
 		driver: db,
 	}
 }
@@ -70,7 +70,7 @@ func (o *FindOptions) SetDate(date time.Time) {
 	o.date = date
 }
 
-func (s *storage) Find(options FindOptions) ([]Event, error) {
+func (s *postgres) Find(options FindOptions) ([]Event, error) {
 	const query = "SELECT * FROM event WHERE start_date >= $1 ORDER BY start_date ASC LIMIT $2 OFFSET $3"
 	events := make([]Event, 0)
 	err := pgxscan.Select(context.TODO(), s.driver, &events, query, options.date, options.limit, options.offset)
@@ -80,7 +80,7 @@ func (s *storage) Find(options FindOptions) ([]Event, error) {
 	return events, nil
 }
 
-func (s *storage) FindByID(id int) (Event, error) {
+func (s *postgres) FindByID(id int) (Event, error) {
 	const query = "SELECT * FROM event WHERE id = $1"
 	// rows, err := s.db.Query(ctx, query, ids)
 	// if err != nil {
@@ -107,31 +107,32 @@ func (s *storage) FindByID(id int) (Event, error) {
 	return event, nil
 }
 
-func (s *storage) Save(event Event) (Event, error) {
+func (s *postgres) Save(event Event) (Event, error) {
 	// isNew := event.ID
 	// if !isNew{
 	// 	// TODO: Update
 	// }
 
-	builder := sqlutils.NewFieldsBuilder()
-	builder.AddField("name", event.Name)
-	builder.AddField("description", event.Description)
-	builder.AddField("artwork_url", event.ArtworkURL)
-	builder.AddField("genre", strings.Join(event.Genres, ","))
-	builder.AddField("start_time", event.StartDate)
-	builder.AddField("end_time", event.EndDate)
-	builder.AddField("tickets_url", event.TicketsURL)
-	builder.AddField("age_restriction", event.AgeRestriction)
-	builder.AddField("promoter", event.Promoter)
-	builder.AddField("location_id", event.LocationID)
-	builder.AddField("is_public", event.IsPublic)
-	builder.AddField("line_up", event.LineUp)
-	builder.AddField("price", event.Price)
+	fields := storage.Fields{}
+	fields.AddField("name", event.Name)
+	fields.AddField("description", event.Description)
+	fields.AddField("artwork_url", event.ArtworkURL)
+	fields.AddField("genre", strings.Join(event.Genres, ","))
+	fields.AddField("start_time", event.StartDate)
+	fields.AddField("end_time", event.EndDate)
+	fields.AddField("tickets_url", event.TicketsURL)
+	fields.AddField("age_restriction", event.AgeRestriction)
+	fields.AddField("promoter", event.Promoter)
+	fields.AddField("location_id", event.LocationID)
+	fields.AddField("is_public", event.IsPublic)
+	fields.AddField("line_up", event.LineUp)
+	fields.AddField("price", event.Price)
 
+	fieldNames, values, args := fields.Build()
 	const sql = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"
-	query := fmt.Sprintf(sql, "event", builder.Fields(), builder.Values())
+	query := fmt.Sprintf(sql, "event", fieldNames, values)
 
-	result := s.driver.QueryRow(context.Background(), query, builder.Args()...)
+	result := s.driver.QueryRow(context.Background(), query, args...)
 	err := result.Scan(&event.ID)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -146,12 +147,12 @@ func (s *storage) Save(event Event) (Event, error) {
 	return event, nil
 }
 
-func (s *storage) Update(id int, options map[string]any) (Event, error) {
+func (s *postgres) Update(id int, options map[string]any) (Event, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (s *storage) Delete(id int) error {
+func (s *postgres) Delete(id int) error {
 	// TODO implement me
 	panic("implement me")
 }
