@@ -58,29 +58,7 @@ func Run(ctx context.Context, args []string) error {
 		ReadTimeout:  app.config.HTTPServer.Timeout * time.Second,
 		WriteTimeout: app.config.HTTPServer.Timeout * time.Second,
 		IdleTimeout:  app.config.HTTPServer.IdleTimeout * time.Second,
-		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
-			response := api.ErrorsResponse{
-				Errors: []api.Error{
-					{
-						Status: fiber.StatusInternalServerError,
-						Code:   "INTERNAL_SERVER_ERROR",
-						Detail: err.Error(),
-					},
-				},
-			}
-
-			// Retrieve the custom status code if it's a *fiber.Error
-			var e *fiber.Error
-			if errors.As(err, &e) {
-				response.Errors[0].Code = strings.ReplaceAll(strings.ToUpper(e.Message), " ", "_")
-				response.Errors[0].Status = e.Code
-			}
-
-			return ctx.Status(response.Errors[0].Status).JSON(response)
-
-			// Return from handler
-			return nil
-		},
+		ErrorHandler: handelError(),
 	})
 	app.httpServer.Use(
 		fiberlogger.New(),
@@ -141,4 +119,27 @@ func Run(ctx context.Context, args []string) error {
 	app.wg.Wait()
 
 	return nil
+}
+
+func handelError() func(ctx *fiber.Ctx, err error) error {
+	return func(ctx *fiber.Ctx, err error) error {
+		var response api.Error
+
+		var fiberError *fiber.Error
+		var apiError api.Error
+
+		switch true {
+		case errors.As(err, &fiberError):
+			response.Status = fiberError.Code
+			response.Code = strings.ReplaceAll(strings.ToUpper(fiberError.Message), " ", "_")
+		case errors.As(err, &apiError):
+			response = apiError
+		default:
+			response.Status = fiber.StatusInternalServerError
+			response.Code = "INTERNAL_SERVER_ERROR"
+			response.Detail = err.Error()
+		}
+
+		return ctx.Status(response.Status).JSON(response)
+	}
 }
