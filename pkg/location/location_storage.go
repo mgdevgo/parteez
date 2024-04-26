@@ -21,7 +21,7 @@ const (
 	_LOCATION_TYPE_TABLE = "location_type"
 )
 
-type LocationStorage interface {
+type Storage interface {
 	Save(location Location) (Location, error)
 	SaveAll(locations []Location) error
 	FindByID(id int) (Location, error)
@@ -30,7 +30,7 @@ type LocationStorage interface {
 	Delete(id int) error
 }
 
-var _ LocationStorage = (*postgres)(nil)
+var _ Storage = (*postgres)(nil)
 
 var ErrAlreadyExist = errors.New("location already exist")
 var ErrNotFound = errors.New("location not found")

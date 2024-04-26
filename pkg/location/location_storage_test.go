@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"iditusi/pkg/utils"
+	"iditusi/pkg/shared/types"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	nanoid "github.com/matoous/go-nanoid/v2"
@@ -54,7 +54,7 @@ func Test_storage_Save(t *testing.T) {
 
 	test("All fields provided", t, &testCase{
 		Location: Location{
-			ID:            utils.NewNumericID(),
+			ID:            types.NewNumericID(),
 			Name:          "Test_" + nanoid.Must(),
 			Type:          Unknown,
 			Description:   "Description_" + nanoid.Must(),

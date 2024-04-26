@@ -8,7 +8,7 @@ func NewHandler() *handler {
 	return &handler{}
 }
 
-func (h *handler) SetupRoutes(router fiber.Router) {
+func (h *handler) RegisterRoutes(router fiber.Router) {
 	auth := router.Group("/auth")
 	auth.Post("/token", func(ctx *fiber.Ctx) error { return fiber.ErrNotImplemented })
 	auth.Get("/authorize", func(ctx *fiber.Ctx) error { return fiber.ErrNotImplemented })

@@ -21,7 +21,7 @@ type Reader interface {
 
 type Writer interface{}
 
-type EventStorage interface {
+type Storage interface {
 	Reader
 	Writer
 }
@@ -31,7 +31,7 @@ type postgres struct {
 	// cache cache.Cache
 }
 
-var _ EventStorage = (*postgres)(nil)
+var _ Storage = (*postgres)(nil)
 
 func NewStorage(db *pgxpool.Pool) *postgres {
 	return &postgres{
@@ -82,24 +82,9 @@ func (s *postgres) Find(options FindOptions) ([]Event, error) {
 
 func (s *postgres) FindByID(id int) (Event, error) {
 	const query = "SELECT * FROM event WHERE id = $1"
-	// rows, err := s.db.Query(ctx, query, ids)
-	// if err != nil {
-	//	return empty, err
-	// }
-	// defer rows.Close()
-	//
-	// for rows.Next() {
-	//	var event Event
-	//	err = rows.Scan(&event.ID, &event.Name)
-	//	if err != nil {
-	//		s.log.Error("Row scan", slog.String("Error", err.Error()))
-	//	}
-	//	events = append(events, event)
-	// }
 
-	var err error
 	var event Event
-	err = pgxscan.Get(context.TODO(), s.driver, &event, query, id)
+	err := pgxscan.Get(context.TODO(), s.driver, &event, query, id)
 	if err != nil {
 		return Event{}, err
 	}

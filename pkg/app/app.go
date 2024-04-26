@@ -13,8 +13,12 @@ import (
 
 	"iditusi/pkg/auth"
 	"iditusi/pkg/event"
+	"iditusi/pkg/feedback"
+	"iditusi/pkg/health"
 	"iditusi/pkg/location"
+	"iditusi/pkg/publications"
 	"iditusi/pkg/shared/api"
+	"iditusi/pkg/user"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -32,6 +36,18 @@ type application struct {
 	logger  *zap.SugaredLogger
 	wg      sync.WaitGroup
 	context context.Context
+	// services []
+	// handlers []
+	// storage *core.Storage
+	// agents []agent
+}
+
+type services struct {
+}
+
+type storage struct {
+	events    event.Storage
+	locations location.Storage
 }
 
 func Run(ctx context.Context, args []string) error {
@@ -69,21 +85,22 @@ func Run(ctx context.Context, args []string) error {
 		}),
 	)
 
-	authHandler := auth.NewHandler()
-
-	api := app.httpServer.Group("/api/v1")
-
 	eventStorage := event.NewStorage(app.database)
 	locationStorage := location.NewStorage(app.database)
 
 	eventService := event.NewService(eventStorage, locationStorage)
 
-	eventHandler := event.NewHandler(eventService)
-	locationHandler := location.NewHandler(locationStorage)
+	root := app.httpServer.Group("")
+	api := app.httpServer.Group("/api/v1")
 
-	locationHandler.SetupRoutes(api)
-	eventHandler.RegisterRoutes(api)
-	authHandler.SetupRoutes(api)
+	registerRoutes(root, auth.NewHandler(), health.NewHandler())
+	registerRoutes(api,
+		event.NewHandler(eventService),
+		location.NewHandler(locationStorage),
+		feedback.NewHandler(),
+		publications.NewHandler(),
+		user.NewHandler(),
+	)
 
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -141,5 +158,15 @@ func handelError() func(ctx *fiber.Ctx, err error) error {
 		}
 
 		return ctx.Status(response.Status).JSON(response)
+	}
+}
+
+type handlerMapper interface {
+	RegisterRoutes(router fiber.Router)
+}
+
+func registerRoutes(router fiber.Router, handlers ...handlerMapper) {
+	for _, handler := range handlers {
+		handler.RegisterRoutes(router)
 	}
 }

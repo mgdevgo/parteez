@@ -9,11 +9,11 @@ import (
 )
 
 type service struct {
-	eventStorage    EventStorage
-	locationStorage location.LocationStorage
+	eventStorage    Storage
+	locationStorage location.Storage
 }
 
-func NewService(eventStorage EventStorage, locationStorage location.LocationStorage) *service {
+func NewService(eventStorage Storage, locationStorage location.Storage) *service {
 	return &service{
 		eventStorage:    eventStorage,
 		locationStorage: locationStorage,

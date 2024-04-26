@@ -8,7 +8,7 @@ func NewHandler() *handler {
 	return &handler{}
 }
 
-func (h *handler) SetupRoutes(router fiber.Router) {
+func (h *handler) RegisterRoutes(router fiber.Router) {
 	me := router.Group("/me")
 	me.Get("/feed", func(ctx *fiber.Ctx) error { return fiber.ErrNotImplemented })
 	me.Get("/library", func(ctx *fiber.Ctx) error { return fiber.ErrNotImplemented })

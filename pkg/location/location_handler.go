@@ -7,16 +7,16 @@ import (
 )
 
 type handler struct {
-	locationStorage LocationStorage
+	locationStorage Storage
 }
 
-func NewHandler(locationStorage LocationStorage) *handler {
+func NewHandler(locationStorage Storage) *handler {
 	return &handler{
 		locationStorage: locationStorage,
 	}
 }
 
-func (h *handler) SetupRoutes(router fiber.Router) {
+func (h *handler) RegisterRoutes(router fiber.Router) {
 	locations := router.Group("/locations")
 	locations.Get("/", h.viewLocations)
 	locations.Post("/", h.addNewLocation)
