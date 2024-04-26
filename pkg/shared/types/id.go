@@ -1,10 +1,16 @@
-package utils
+package types
 
 import (
 	"math/rand"
 
+	"github.com/google/uuid"
 	nanoid "github.com/matoous/go-nanoid/v2"
+	"github.com/oklog/ulid/v2"
 )
+
+type ID interface {
+	int | string | uuid.UUID | ulid.ULID
+}
 
 const alphabet = "0123456789"
 const size = 10
