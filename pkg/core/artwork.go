@@ -1,4 +1,4 @@
-package types
+package core
 
 type Artwork struct {
 	Width      int    `json:"width"`
