@@ -1,84 +1,100 @@
 package parser
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"iditusi/pkg/event"
-	"iditusi/pkg/location"
+	"iditusi/pkg/core"
 
 	"github.com/gocolly/colly"
+	"github.com/gocolly/colly/debug"
 )
 
-type WebParser struct {
-	rootURL   string
+/*
+	   parsing
+	   / 	\ 				\
+source_1	source_2  ...source_x
+			/ | \
+    parser_1  parser_2 ...parser_x
+*/
+// parser should trigger scrape all sources every 12 hours.
+//
+type WebPage struct {
+	name      string
+	url       string
 	collector *colly.Collector
+	output    chan string
 }
 
-func NewWebParser(URL string) *WebParser {
-	return &WebParser{
-		rootURL: URL,
+func NewWebPage(name string, URL string) *WebPage {
+	return &WebPage{
+		name: name,
+		url:  URL,
 		collector: colly.NewCollector(
 			colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0"),
-			// colly.Debugger(&debug.LogDebugger{}),
+			colly.Debugger(&debug.LogDebugger{}),
+
+			// Cache responses to prevent multiple download of pages
+			// even if the collector is restarted
+			colly.CacheDir("./.cache/"+name),
+			colly.Async(true),
 		),
+		output: make(chan string),
 	}
 }
 
-type Result struct {
-	Event    event.Event
-	Location location.Location
-}
+func (p *WebPage) Parse() chan string {
+	// Create another collector to scrape event details
+	detailsCollector := p.collector.Clone()
 
-func (p *WebParser) Parse() {
-
-}
-
-func (p *WebParser) ParseX() []Result {
-
-	results := make([]Result, 0)
+	// results := make([]Result, 0)
 	// events := make([]event.Event, 0)
 	// locations := make([]location.Location, 0)
 	// event[name] -> location[name]
 	// eventToLocationMap := make(map[string]string)
+	p.collector.OnRequest(func(r *colly.Request) {
+		log.Println("Visiting URL: ", r.URL.String())
+	})
 
-	// body > main > article
-	p.collector.OnHTML("article[itemscope]", func(e *colly.HTMLElement) {
-		data := event.Event{}
-		place := location.Location{}
+	p.collector.OnHTML("article > div.event-information-banner__afisha > a", func(e *colly.HTMLElement) {
+		link := e.Request.AbsoluteURL(e.Attr("href"))
+		detailsCollector.Visit(link)
+	})
+
+	detailsCollector.OnHTML("article[itemscope]", func(e *colly.HTMLElement) {
+		var event core.Event
+		var place core.Location
 
 		// Age restriction
 		age := e.ChildText("h1.event-information__name > span.age-limit")
-		data.AgeRestriction, _ = strconv.Atoi(strings.Trim(age, "+"))
+		event.AgeRestriction, _ = strconv.Atoi(strings.Trim(age, "+"))
 		// Name
-		data.Name = strings.TrimSpace(strings.TrimRight(e.ChildText("h1.event-information__name"), age))
-		log.Printf("Name: %s\n", data.Name)
+		event.Name = strings.TrimSpace(strings.TrimRight(e.ChildText("h1.event-information__name"), age))
 		// Description
-		data.Description = strings.TrimSpace(e.ChildText("div.event-information__description"))
+		event.Description = strings.TrimSpace(e.ChildText("div.event-information__description"))
 		// ArtworkURL
-		data.ArtworkURL = strings.Trim(e.ChildAttr("div.event-information-banner", "style"), "background-image: url()")
+		event.ArtworkURL = strings.Trim(e.ChildAttr("div.event-information-banner", "style"), "background-image: url()")
 		// Genres
-		data.Genres = make([]string, 0)
+		event.Genres = make([]string, 0)
 		e.ForEach("div.bottom-tags-wrapper > span.btn-tag-genres", func(i int, e *colly.HTMLElement) {
-			data.Genres = append(data.Genres, strings.TrimSpace(e.Text))
+			event.Genres = append(event.Genres, strings.TrimSpace(e.Text))
 		})
 		// LineUp
-		data.LineUp = event.LineUp{"main": make([]event.Performer, 0)}
+		artists := make([]core.LineUpArtist, 0)
 		e.ForEach(`ul.program-block__list > li.program-block__item[itemprop="performer"]`, func(i int, e *colly.HTMLElement) {
-			data.LineUp["main"] = append(data.LineUp["main"],
-				event.Performer{Name: squashSpace(e.Text)},
-			)
+			artists = append(artists, core.LineUpArtist{Name: squashSpace(e.Text)})
 		})
+		event.LineUp = core.LineUp{
+			{"main", artists},
+		}
 		// Dates
 		loc, _ := time.LoadLocation("Europe/Moscow")
 		// Start date and time
-		data.StartDate, _ = time.ParseInLocation(
+		event.StartDate, _ = time.ParseInLocation(
 			time.DateTime,
 			fmt.Sprintf(
 				"%s %s:00",
@@ -88,7 +104,7 @@ func (p *WebParser) ParseX() []Result {
 			loc,
 		)
 		// End date. If not presented time.Time zero value
-		data.EndDate, _ = time.ParseInLocation(
+		event.EndDate, _ = time.ParseInLocation(
 			time.DateTime,
 			fmt.Sprintf(
 				"%s %s:00",
@@ -106,48 +122,42 @@ func (p *WebParser) ParseX() []Result {
 		place.Address = squashSpace(address[0])
 
 		// Location metro stations
+		stations := make([]string, 0)
 		if len(address) > 1 {
 			metro := strings.Split(address[1], ",")
 			for _, i := range metro {
-				place.MetroStations = append(place.MetroStations, strings.TrimSpace(i))
+				stations = append(stations, strings.TrimSpace(i))
 			}
-		} else {
-			place.MetroStations = make([]string, 0)
 		}
+		place.NearestMetroStations = stations
 
 		// Tickets
 		// TODO: get full url instead of shorten
-		data.TicketsURL = e.ChildAttr("a.buy-btn", "href")
+		event.Tickets.URL = e.ChildAttr("a.buy-btn", "href")
 
-		// events = append(events, data)
-		// locations = append(locations, place)
-		// eventToLocationMap[data.Name] = place.Name
-		results = append(results, Result{
-			data,
-			place,
-		})
+		// events = append(events, event)
+		// locations = append(locations, places)
+		// eventToLocationMap[event.Name] = places.Name
+		// results = append(results, Result{
+		// 	event,
+		// 	Location: place,
+		// })
+
+		p.output <- event.Name
 	})
 
-	p.collector.OnHTML("article > div.event-information-banner__afisha > a", func(e *colly.HTMLElement) {
-		link := e.Request.AbsoluteURL(e.Attr("href"))
-		e.Request.Visit(link)
-	})
-
-	p.collector.OnRequest(func(r *colly.Request) {
-		log.Println("Visiting URL: ", r.URL.String())
-	})
-
-	p.collector.Visit(p.rootURL)
+	p.collector.Visit(p.url)
 
 	p.collector.Wait()
 
-	bytes, _ := json.MarshalIndent(results, "", " ")
-	now := time.Now()
-	err := os.WriteFile(fmt.Sprintf("./%s-%d.json", strings.Fields(now.String())[0], now.Unix()), bytes, 0644)
-	if err != nil {
-		log.Println(err)
-	}
-	return results
+	// bytes, _ := json.MarshalIndent(results, "", " ")
+	// now := time.Now()
+	// err := os.WriteFile(fmt.Sprintf("./%s-%d.json", strings.Fields(now.String())[0], now.Unix()), bytes, 0644)
+	// if err != nil {
+	// 	log.Println(err)
+	// }
+
+	return p.output
 }
 
 // squashSpace turn many spaces into one
@@ -177,7 +187,7 @@ func parseDate(date string, times string) (time.Time, error) {
 // 	// fmt.Println(e.Name, e.Attr("class"))
 //
 // 	venue := location.Location{
-// 		ID:   utils.NewID(),
+// 		ID:   id.NewID(),
 // 		Type: location.Bar,
 // 	}
 //

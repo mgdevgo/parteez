@@ -1,4 +1,4 @@
-package location
+package postgres
 
 import (
 	"context"
@@ -7,8 +7,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	"iditusi/pkg/shared/types"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	nanoid "github.com/matoous/go-nanoid/v2"
@@ -54,7 +52,6 @@ func Test_storage_Save(t *testing.T) {
 
 	test("All fields provided", t, &testCase{
 		Location: Location{
-			ID:            types.NewNumericID(),
 			Name:          "Test_" + nanoid.Must(),
 			Type:          Unknown,
 			Description:   "Description_" + nanoid.Must(),
@@ -77,7 +74,7 @@ func Test_storage_Save(t *testing.T) {
 			Stages: StagesDefault,
 		},
 		ExpectedID:    1000000001,
-		ExpectedError: ErrAlreadyExist,
+		ExpectedError: ErrLocationAlreadyExist,
 	})
 }
 
@@ -126,7 +123,7 @@ func Test_storage_FindByID(t *testing.T) {
 			ID:          123,
 			Name:        "odin dva tri",
 			Type:        Unknown,
-			Description: "very cool place",
+			Description: "very cool places",
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		},
@@ -138,7 +135,7 @@ func Test_storage_FindByID(t *testing.T) {
 			ID:            69,
 			Name:          "oh my",
 			Type:          Club,
-			Description:   "Secret place",
+			Description:   "Secret places",
 			ArtworkURL:    "htps://img.local/69",
 			Stages:        []string{"main", "second"},
 			Address:       "Somewhere in the world",
@@ -156,7 +153,7 @@ func Test_storage_FindByID(t *testing.T) {
 			ID:            69,
 			Name:          "oh my",
 			Type:          Club,
-			Description:   "Secret place",
+			Description:   "Secret places",
 			ArtworkURL:    "htps://img.local/69",
 			Stages:        []string{"main", "second"},
 			Address:       "Somewhere in the world",
@@ -173,7 +170,7 @@ func Test_storage_BatchSave(t *testing.T) {
 	type testCase struct {
 		Name string
 
-		Storage *postgres
+		Storage *LocationStorage
 
 		Locations []Location
 

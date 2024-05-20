@@ -2,8 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/pkg/errors"
 )
 
 // ErrorType is the list of allowed values for the error's type.
@@ -37,8 +39,9 @@ type Error struct {
 	// A summary of the error.
 	Title string `json:"title,omitempty"`
 	// A detailed explanation of the error.
-	Detail string    `json:"detail,omitempty"`
-	Source *struct { // The query parameter that produced the error.
+	Detail string `json:"detail,omitempty"`
+	Source *struct {
+		// The query parameter that produced the error.
 		Parameter string `json:"parameter,omitempty"`
 		// A JSON pointer that indicates the location in the request entity where the error originates.
 		Pointer string `json:"pointer,omitempty"`
@@ -89,4 +92,27 @@ func NewInvalidRequestError(code ErrorCode, title string, details ...string) *Er
 		error.Detail = details[0]
 	}
 	return error
+}
+
+func ErrorHandler() func(ctx *fiber.Ctx, err error) error {
+	return func(ctx *fiber.Ctx, err error) error {
+		var response Error
+
+		var fiberError *fiber.Error
+		var apiError Error
+
+		switch true {
+		case errors.As(err, &fiberError):
+			response.Status = fiberError.Code
+			response.Code = strings.ReplaceAll(strings.ToUpper(fiberError.Message), " ", "_")
+		case errors.As(err, &apiError):
+			response = apiError
+		default:
+			response.Status = fiber.StatusInternalServerError
+			response.Code = "INTERNAL_SERVER_ERROR"
+			response.Detail = err.Error()
+		}
+
+		return ctx.Status(response.Status).JSON(response)
+	}
 }

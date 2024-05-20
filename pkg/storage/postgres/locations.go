@@ -1,4 +1,4 @@
-package location
+package postgres
 
 import (
 	"context"
@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"iditusi/pkg/shared/storage"
+	"iditusi/pkg/core"
+	"iditusi/pkg/storage/fileds"
 
 	transaction "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
 	"github.com/georgysavva/scany/v2/pgxscan"
@@ -16,45 +17,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	_LOCATION_TABLE      = "location"
-	_LOCATION_TYPE_TABLE = "location_type"
-)
-
-type Storage interface {
-	Save(location Location) (Location, error)
-	SaveAll(locations []Location) error
-	FindByID(id int) (Location, error)
-	FindByName(name string) (Location, error)
-	FindAll() ([]Location, error)
-	Delete(id int) error
-}
-
-var _ Storage = (*postgres)(nil)
-
-var ErrAlreadyExist = errors.New("location already exist")
-var ErrNotFound = errors.New("location not found")
-
-type postgres struct {
+type LocationStorage struct {
 	driver    *pgxpool.Pool
 	txManager *transaction.CtxGetter
 }
 
-func NewStorage(db *pgxpool.Pool) *postgres {
-	return &postgres{
+func NewLocationsStorage(db *pgxpool.Pool) *LocationStorage {
+	return &LocationStorage{
 		driver: db,
 	}
 }
 
-func (s *postgres) Save(location Location) (Location, error) {
-	fields := storage.Fields{}
+func (s *LocationStorage) Save(ctx context.Context, location core.Location) (core.Location, error) {
+	fields := fileds.Fields{}
 	fields.AddField("name", location.Name)
-	fields.AddField("location_type_id", location.Type, "(SELECT id FROM "+_LOCATION_TYPE_TABLE+" WHERE name = $%d)")
+	fields.AddField("location_type_id", location.Type, "(SELECT id FROM "+locationTypeTable+" WHERE name = $%d)")
 	fields.AddField("description", location.Description)
 	fields.AddField("artwork_url", location.ArtworkURL)
 	fields.AddField("stages", strings.Join(location.Stages, ","))
 	fields.AddField("address", location.Address)
-	fields.AddField("metro_stations", strings.Join(location.MetroStations, ","))
+	fields.AddField("nearest_metro_stations", strings.Join(location.NearestMetroStations, ","))
 	fields.AddField("is_public", location.IsPublic)
 	timestamp := time.Now()
 	fields.AddField("created_at", timestamp)
@@ -62,25 +44,24 @@ func (s *postgres) Save(location Location) (Location, error) {
 
 	fieldNames, values, args := fields.Build()
 	const sql = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"
-	query := fmt.Sprintf(sql, _LOCATION_TABLE, fieldNames, values)
+	query := fmt.Sprintf(sql, locationTable, fieldNames, values)
 
-	result := s.driver.QueryRow(context.Background(), query, args...)
+	result := s.driver.QueryRow(ctx, query, args...)
 
 	if err := result.Scan(&location.ID); err != nil {
 		var pgerr *pgconn.PgError
 		if errors.As(err, &pgerr) {
 			switch pgerr.Code {
 			case "23505":
-				return Location{}, ErrAlreadyExist
+				return core.Location{}, ErrLocationAlreadyExist
 			}
 		}
-		return Location{}, err
+		return core.Location{}, err
 	}
 	return location, nil
 }
 
-func (s *postgres) SaveAll(locations []Location) error {
-	ctx := context.TODO()
+func (s *LocationStorage) SaveAll(ctx context.Context, locations []core.Location) error {
 
 	// tx := s.txManager.DefaultTrOrDB(ctx, s.driver)
 
@@ -90,15 +71,15 @@ func (s *postgres) SaveAll(locations []Location) error {
 	}
 
 	for _, location := range locations {
-		fields := storage.Fields{}
+		fields := fileds.Fields{}
 		fields.AddField("id", location.ID)
 		fields.AddField("name", location.Name)
-		fields.AddField("location_type_id", location.Type, "(SELECT id FROM "+_LOCATION_TYPE_TABLE+" WHERE name = $%d)")
+		fields.AddField("location_type_id", location.Type, "(SELECT id FROM "+locationTypeTable+" WHERE name = $%d)")
 		fields.AddField("description", location.Description)
 		fields.AddField("artwork_url", location.ArtworkURL)
 		fields.AddField("stages", strings.Join(location.Stages, ","))
 		fields.AddField("address", location.Address)
-		fields.AddField("metro_stations", strings.Join(location.MetroStations, ","))
+		fields.AddField("nearest_metro_stations", strings.Join(location.NearestMetroStations, ","))
 		fields.AddField("is_public", location.IsPublic)
 		timestamp := time.Now()
 		fields.AddField("created_at", timestamp)
@@ -106,9 +87,9 @@ func (s *postgres) SaveAll(locations []Location) error {
 
 		fieldNames, values, args := fields.Build()
 		const sql = "INSERT INTO %s (%s) VALUES (%s) RETURNING id"
-		query := fmt.Sprintf(sql, _LOCATION_TABLE, fieldNames, values)
+		query := fmt.Sprintf(sql, locationTable, fieldNames, values)
 
-		row := tx.QueryRow(context.Background(), query, args...)
+		row := tx.QueryRow(ctx, query, args...)
 
 		var id int
 
@@ -134,23 +115,23 @@ type findOption struct {
 	Value any
 }
 
-func (s *postgres) findBy(option findOption) (Location, error) {
+func (s *LocationStorage) findBy(ctx context.Context, option findOption) (core.Location, error) {
 	if option.Name != "name" && option.Name != "id" {
 		fmt.Errorf("unknown option: name=%s", option)
 	}
 
 	const sql = `
-SELECT l.id, l.name, lt.name as type, l.description, l.artwork_url, l.stages, l.address, l.metro_stations, l.is_public, l.created_at, l.updated_at
+SELECT l.id, l.name, lt.name as type, l.description, l.artwork_url, l.stages, l.address, l.nearest_metro_stations, l.is_public, l.created_at, l.updated_at
 FROM %s l 
 INNER JOIN %s lt  ON l.location_type_id = lt.id 
 WHERE l.%s = $1`
-	query := fmt.Sprintf(sql, _LOCATION_TABLE, _LOCATION_TYPE_TABLE, option.Name)
-	var result Location
+	query := fmt.Sprintf(sql, locationTable, locationTypeTable, option.Name)
+	var result core.Location
 
 	var stages string
 	var metroStations string
 	// var latitude, longitude int
-	row := s.driver.QueryRow(context.TODO(), query, option.Value)
+	row := s.driver.QueryRow(ctx, query, option.Value)
 	if err := row.Scan(
 		&result.ID,
 		&result.Name,
@@ -167,9 +148,9 @@ WHERE l.%s = $1`
 		&result.UpdatedAt,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Location{}, ErrNotFound
+			return core.Location{}, ErrLocationNotFound
 		}
-		return Location{}, err
+		return core.Location{}, err
 	}
 
 	if stages != "" {
@@ -177,53 +158,53 @@ WHERE l.%s = $1`
 	}
 
 	if metroStations != "" {
-		result.MetroStations = strings.Split(metroStations, ",")
+		result.NearestMetroStations = strings.Split(metroStations, ",")
 	}
 
 	return result, nil
 }
-func (s *postgres) FindByID(id int) (Location, error) {
-	return s.findBy(findOption{
+func (s *LocationStorage) FindByID(ctx context.Context, id int) (core.Location, error) {
+	return s.findBy(ctx, findOption{
 		Name:  "id",
 		Value: id,
 	})
 }
 
-func (s *postgres) FindByName(name string) (Location, error) {
-	return s.findBy(findOption{
+func (s *LocationStorage) FindByName(ctx context.Context, name string) (core.Location, error) {
+	return s.findBy(ctx, findOption{
 		Name:  "name",
 		Value: name,
 	})
 }
 
-func (s *postgres) FindAll() ([]Location, error) {
+func (s *LocationStorage) FindAll(ctx context.Context) ([]core.Location, error) {
 	type record struct {
-		ID            int
-		Name          string
-		Type          Kind
-		Description   string
-		ArtworkURL    string
-		Stages        string
-		Address       string
-		MetroStations string
-		IsPublic      bool
-		CreatedAt     time.Time
-		UpdatedAt     time.Time
+		ID                   int
+		Name                 string
+		Type                 core.LocationType
+		Description          string
+		ArtworkURL           string
+		Stages               string
+		Address              string
+		NearestMetroStations string
+		IsPublic             bool
+		CreatedAt            time.Time
+		UpdatedAt            time.Time
 	}
 	const sql = `
-SELECT l.id, l.name, lt.name as type, l.description, l.artwork_url, l.stages, l.address, l.metro_stations, l.is_public, l.created_at, l.updated_at
+SELECT l.id, l.name, lt.name as type, l.description, l.artwork_url, l.stages, l.address, l.nearest_metro_stations, l.is_public, l.created_at, l.updated_at
 FROM %s l 
 INNER JOIN %s lt  ON l.location_type_id = lt.id
 WHERE l.id > 0`
-	query := fmt.Sprintf(sql, _LOCATION_TABLE, _LOCATION_TYPE_TABLE)
+	query := fmt.Sprintf(sql, locationTable, locationTypeTable)
 
 	var result []record
-	err := pgxscan.Select(context.TODO(), s.driver, &result, query)
+	err := pgxscan.Select(ctx, s.driver, &result, query)
 	if err != nil {
-		return []Location{}, err
+		return []core.Location{}, err
 	}
 
-	locations := make([]Location, len(result))
+	locations := make([]core.Location, len(result))
 	for i, record := range result {
 		locations[i].ID = record.ID
 		locations[i].Name = record.Name
@@ -232,7 +213,7 @@ WHERE l.id > 0`
 		locations[i].ArtworkURL = record.ArtworkURL
 		locations[i].Stages = strings.Split(record.Stages, ",")
 		locations[i].Address = record.Address
-		locations[i].MetroStations = strings.Split(record.MetroStations, ",")
+		locations[i].NearestMetroStations = strings.Split(record.NearestMetroStations, ",")
 		locations[i].IsPublic = record.IsPublic
 		locations[i].CreatedAt = record.CreatedAt
 		locations[i].UpdatedAt = record.UpdatedAt
@@ -241,7 +222,7 @@ WHERE l.id > 0`
 	return locations, nil
 }
 
-func (s *postgres) Delete(id int) error {
-	_, err := s.driver.Exec(context.TODO(), fmt.Sprintf("DELETE FROM %s WHERE id = $1", _LOCATION_TABLE), id)
+func (s *LocationStorage) Delete(ctx context.Context, id int) error {
+	_, err := s.driver.Exec(ctx, fmt.Sprintf("DELETE FROM %s WHERE id = $1", locationTable), id)
 	return err
 }

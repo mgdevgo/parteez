@@ -9,3 +9,5 @@ build/
 
 cmd/test/
 /pkg/event/parser/*.json
+
+.cache/
