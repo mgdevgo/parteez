@@ -1,4 +1,4 @@
-package event
+package postgres
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ func TestStorageFind(t *testing.T) {
 	type testCase struct {
 		Name string
 
-		Storage *postgres
+		Storage *EventStorage
 
 		Options FindOptions
 
@@ -45,7 +45,7 @@ func Test_storage_Save(t *testing.T) {
 	type testCase struct {
 		Name string
 
-		Storage *postgres
+		Storage *EventStorage
 
 		Event Event
 
