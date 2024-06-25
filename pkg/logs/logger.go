@@ -4,29 +4,29 @@ import (
 	"log/slog"
 	"os"
 
-	"iditusi/pkg/core"
+	"iditusi/internal/models"
 	"iditusi/pkg/logs/handlers"
 )
 
 type Ctx struct {
 }
 
-func NewLogger(env core.AppEnv) *slog.Logger {
+func NewLogger(env models.AppEnv) *slog.Logger {
 	logger := new(slog.Logger)
 
 	switch env {
-	case core.AppEnvLocal:
+	case models.AppEnvLocal:
 		opts := handlers.PrettyHandlerOptions{
 			SlogOpts: &slog.HandlerOptions{
 				Level: slog.LevelDebug,
 			},
 		}
 		logger = slog.New(opts.NewPrettyHandler(os.Stdout))
-	case core.AppEnvDev:
+	case models.AppEnvDev:
 		logger = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
 		)
-	case core.AppEnvProd:
+	case models.AppEnvProd:
 		logger = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		)
