@@ -1,7 +1,7 @@
-CREATE TABLE artwork
+create table artworks
 (
-    id           serial PRIMARY KEY,
-    url          text UNIQUE NOT NULL,
+    id           serial primary key,
+    image_url    text unique not null,
     width        int,
     height       int,
     bg_color     char(6),
@@ -11,22 +11,20 @@ CREATE TABLE artwork
     text_color_4 char(6)
 );
 
-CREATE TYPE venue_type AS ENUM ('club', 'bar', 'cafe', 'space','concert_hall');
+create type venue_type as enum ('club', 'bar', 'cafe', 'space','concert_hall');
 
-CREATE TABLE venue
+create table venues
 (
-    id             serial PRIMARY KEY,
-    name           varchar(64) UNIQUE NOT NULL,
+    id             serial primary key,
+    name           varchar(64) unique not null,
     type           venue_type,
-    description    varchar(256)       NOT NULL,
-    artwork_id     int REFERENCES artwork (id),
-    address        text               NOT NULL,
-    metro_stations text               NOT NULL,
-    latitude       int,
-    longitude      int,
-    is_public      boolean            NOT NULL DEFAULT false,
-    created_at     timestamptz        NOT NULL DEFAULT now(),
-    updated_at     timestamptz        NOT NULL DEFAULT now()
+    description    text        default '',
+    artwork_id     int references artwork (id),
+    address        text        default '',
+    metro_stations text[],
+    public         boolean     default false,
+    created_at     timestamptz default now(),
+    updated_at     timestamptz default now()
 );
 
 CREATE TABLE venue_stages
@@ -78,13 +76,15 @@ CREATE TABLE event_lineup
     PRIMARY KEY (event_id, stage_name, artist_name)
 );
 
-CREATE TABLE event_tickets
+CREATE TABLE events_tickets
 (
-    event_id    int REFERENCES event (id),
+    id int
+    event_id    int references events (id),
     title       varchar(64) NOT NULL,
     price       int         NOT NULL,
-    description text,
-    PRIMARY KEY (event_id, title)
+    description text default '',
+    primary key (id),
+    unique (event_id, title)
 );
 
 CREATE TABLE event_promo
@@ -143,5 +143,82 @@ CREATE TABLE event_genres
 --        (5, 'space'),
 --        (6, 'concert_hall');
 
+-- INSERT INTO location (id, name, description, artwork_url, stages, address, metro_stations)
+-- VALUES (-1, 'DEFAULT', 'This location used as default when no location provided', '', '', '', '');
+
+-- CREATE TABLE
+--   event_lineup (
+--     event_id int,
+--     stage_name int,
+--     artist_name int,
+--     is_live boolean,
+--     start_at time,
+--     FOREIGN KEY (event_id) REFERENCES event (id),
+--     PRIMARY KEY (event_id, stage_name, artist_name)
+--   );
+
+-- CREATE TABLE
+--   event_tickets (
+--     event_id int REFERENCES event (id),
+--     title varchar(64) NOT NULL,
+--     price int NOT NULL,
+--     description text,
+--     PRIMARY KEY (event_id, title)
+--   );
+
+-- CREATE TABLE
+--   event_promo (
+--     event_id int REFERENCES event (id),
+--     title varchar(64) NOT NULL,
+--     terms text NOT NULL,
+--     PRIMARY KEY (event_id, title)
+--   );
+
+-- create table
+--   venues_stages (
+--     venue_id int not null,
+--     stage_id int not null,
+--     stage_name varchar(256) not null,
+--     primary KEY (venue_id, stage_id),
+--     FOREIGN KEY (venue_id) REFERENCES venue (id),
+--     UNIQUE (venue_id, stage_id, stage_name)
+--   );
+
+-- CREATE TABLE
+--   artist (
+--     id serial PRIMARY KEY,
+--     name varchar(64) UNIQUE NOT NULL
+--   );
+
+-- CREATE TABLE event_likes
+-- (
+--     event_id int REFERENCES event (id),
+--     user_id  int REFERENCES "user" (id),
+--     PRIMARY KEY (event_id, user_id)
+-- );
+-- CREATE TYPE event_status AS ENUM ('editing','review', 'published');
+-- CREATE TABLE event_reviews
+-- (
+--     event_id    char(26) REFERENCES event (id)              NOT NULL,
+--     user_id     int REFERENCES "user" (id)             NOT NULL,
+--     stars       smallint CHECK (stars BETWEEN 1 and 5) NOT NULL,
+--     title       varchar(128)                           NOT NULL,
+--     description TEXT,
+--     created_at  timestamp DEFAULT CURRENT_TIMESTAMP,
+--     PRIMARY KEY (event_id, user_id)
+-- );
+-- CREATE TABLE venue_type
+-- (
+--     id   int PRIMARY KEY,
+--     name varchar(16) NOT NULL UNIQUE
+-- );
+--
+-- INSERT INTO venue_type (id, name)
+-- VALUES (1, 'default'),
+--        (2, 'club'),
+--        (3, 'bar'),
+--        (4, 'cafe'),
+--        (5, 'space'),
+--        (6, 'concert_hall');
 -- INSERT INTO location (id, name, description, artwork_url, stages, address, metro_stations)
 -- VALUES (-1, 'DEFAULT', 'This location used as default when no location provided', '', '', '', '');

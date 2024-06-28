@@ -1,8 +1,8 @@
 module iditusi
 
-go 1.21
+go 1.21.0
 
-toolchain go1.21.4
+toolchain go1.22rc1
 
 require (
 	github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2 v2.0.0-rc8
@@ -44,6 +44,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/jesses-code-adventures/utapi-go v0.2.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/klauspost/compress v1.17.4 // indirect
