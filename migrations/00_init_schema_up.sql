@@ -1,85 +1,160 @@
-create table
-    artworks (
-        id serial primary key,
-        image_url text unique not null,
-        width int,
-        height int,
-        bg_color char(6),
-        text_color_1 char(6),
-        text_color_2 char(6),
-        text_color_3 char(6),
-        text_color_4 char(6)
-    );
+create table artworks
+(
+    id           serial,
+    name         text not null,
+    width        int,
+    height       int,
+    bg_color     char(6),
+    text_color_1 char(6),
+    text_color_2 char(6),
+    text_color_3 char(6),
+    text_color_4 char(6),
+    primary key (id)
+);
 
-create type venue_type as enum('club', 'bar', 'cafe', 'space', 'concert_hall');
+create type visibility as enum ('public', 'private');
 
-create table
-    venues (
-        id serial primary key,
-        name varchar(64) unique not null,
-        type venue_type,
-        description text default '',
-        artwork_id int references artworks (id),
-        stages text[],
-        address text default '',
-        metro_stations text[],
-        public boolean default false,
-        created_at timestamptz default now(),
-        updated_at timestamptz default now()
-    );
+create type venue_type as enum ('unknown', 'club', 'bar', 'restaurant', 'space', 'concert_hall', 'open_air');
 
-create table
-    events (
-        id serial primary key,
-        title varchar(64) not null,
-        description text default '',
-        date date not null,
-        start_time time not null,
-        end_time time null,
-        age_restriction int default 18,
-        promoter varchar(128),
-        tickets_url text,
-        artwork_id int references artworks (id),
-        venue_id int references venues (id),
-        public boolean default false,
-        updated_at timestamp default now(),
-        created_at timestamp default now(),
-        unique (title, date)
-    );
+create table venues
+(
+    id             serial,
+    name           varchar(64) not null,
+    type           venue_type           default 'unknown',
+    description    text        not null default '',
+    stages         text[]      not null default '{"main"}',
+    artwork_id     int,
+
+    address        text        not null default '',
+    metro_stations text[]      not null default '{}',
+
+    visibility     visibility  not null default 'private',
+    created_at     timestamptz not null default now(),
+    updated_at     timestamptz not null default now(),
+
+    primary key (id),
+    foreign key (artwork_id) references artworks (id),
+    unique (name)
+);
+
+create type event_status as enum ('draft', 'review_required', 'approved');
+
+create table events
+(
+    id              serial,
+    title           varchar(64)  not null,
+    description     text         not null default '',
+    artwork_id      int,
+
+    -- Period when event is happening
+    -- TODO: choose one
+    date            date         not null,
+    time            tstzrange    not null,
+    start_time      time         not null,
+    end_time        time         null,
+
+    age_restriction int          not null default 18,
+
+    promoter        varchar(128) not null default '',
+    venue_id        int,
+    tickets_url     text         not null default '',
+
+    status          event_status not null default 'draft',
+    visibility      visibility   not null default 'private',
+
+    updated_at      timestamptz  not null default now(),
+    created_at      timestamptz  not null default now(),
+    primary key (id),
+    foreign key (artwork_id) references artworks (id),
+    foreign key (venue_id) references venues (id),
+    unique (title, date)
+);
 
 create index events_date_idx on events (date);
-create index events_is_public_idx on events (id) where public is true;
+create index events_is_public_idx on events (id) where visibility = 'public';
 
-create table
-    events_lineup (
-        event_id int references events(id),
-        stage varchar(64),
-        artist_name varchar(64),
-        live boolean,
-        start_at time,
-        primary key (event_id, stage_name, artist_name)
-    );
+create table artists
+(
+    id          serial,
+    name        text not null,
+    social_link text not null default '',
+    primary key (id),
+    unique (name)
+);
 
-create table
-    genres (
-        id serial primary key,
-        name varchar(32) unique not null,
-        description varchar(128) default ''
-    );
+create table lineups
+(
+    id        serial,
+    event_id  int,
+    stage     text not null default 'main',
+    with_time boolean       default false,
+    primary key (id),
+    foreign key (event_id) references events (id) on delete cascade,
+    unique (event_id, stage)
+);
 
-create table
-    events_genres (
-        event_id int,
-        genre_id int,
-        primary key (event_id, genre_id)
-    );
+create index events_lineup_idx on lineups (event_id);
 
-create table
-    events_tickets (
-        id int primary key,
-        event_id int references events (id),
-        title varchar(64) not null,
-        price int not null,
-        description text default '',
-        unique (event_id, title)
-    );
+create table lineups_artists
+(
+    lineup_id int     not null,
+    artist_id int     not null,
+    live      boolean not null default false,
+    start_at  time,
+    b2b       int,
+    primary key (lineup_id, artist_id),
+    foreign key (lineup_id) references lineups (id) on delete cascade,
+    foreign key (event_id) references events (id),
+    foreign key (artist_id) references artists (id),
+    foreign key (b2b) references artists (id)
+);
+
+-- create table events_lineups
+-- (
+--     event_id  int,
+--     lineup_id int,
+--     foreign key (event_id) references events (id),
+--     foreign key (lineup_id) references lineups (id)
+-- );
+
+-- create table events_lineups
+-- (
+--     event_id  int     not null,
+--     stage     text    not null default 'main',
+--     artist_id int     not null,
+--     live      boolean not null default false,
+--     start_at  time,
+--     b2b       int,
+--     primary key (event_id, stage, artist_id),
+--     foreign key (event_id) references events (id) on delete cascade,
+--     foreign key (artist_id) references artists (id),
+--     foreign key (b2b) references artists (id)
+-- );
+
+create table genres
+(
+    id          serial,
+    name        varchar(32) not null,
+    description varchar(128) default '',
+    primary key (id),
+    unique (name)
+);
+
+create table events_genres
+(
+    event_id int not null,
+    genre_id int not null,
+    primary key (event_id, genre_id)
+);
+
+create table events_tickets
+(
+    id          serial,
+    event_id    int         not null,
+    title       varchar(64) not null,
+    price       int         not null,
+    description text        not null default '',
+    primary key (id),
+    unique (event_id, title),
+    foreign key (event_id) references events (id) on delete cascade
+);
