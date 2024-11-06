@@ -1,7 +1,17 @@
 package main
 
-import console "github.com/urfave/cli/v2"
+import (
+	"fmt"
 
-var MigrateCommand = &console.Command{
-	Name: "migrate",
+	"github.com/spf13/cobra"
+)
+
+func NewMigrateCommand() *cobra.Command {
+	migrateCommand := &cobra.Command{
+		Use: "migrate",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("migrate command not implemented")
+		},
+	}
+	return migrateCommand
 }
