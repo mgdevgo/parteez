@@ -2,13 +2,14 @@
 .env.*
 
 # IDE settings
-.idea
-.vscode
+.idea/
+.vscode/
 
 build/
-.bin/
-
-cmd/test/
-/pkg/event/parser/*.json
+bin/
 
 .cache/
+
+.pgdata/
+
+.bruno/

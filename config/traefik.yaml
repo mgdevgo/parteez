@@ -1,0 +1,70 @@
+api:
+  insecure: false
+  dashboard: true
+  debug: true
+  disableDashboardAd: true
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: proxy
+
+file:
+  directory: /etc/traefik
+  watch: true
+  filename: traefik.yaml
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: web-secure
+          scheme: https
+
+  web-secure:
+    address: ":443"
+
+http:
+  routers:
+    iditusi-mini-app:
+      # won't listen to entry point web
+      entryPoints:
+        - "web-secure"
+      rule: "Host(`mini.iditusi.app`)"
+      middlewares:
+        mini-app-prefix:
+          addPrefix:
+            prefix: "/bot"
+      service: "iditusi-api"
+
+  middlewares:
+    traefik-dashboard-auth:
+      basicAuth:
+        users:
+          - "test:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8wj/"
+          - "test2:$apr1$d9hr9HBB$4HxwgUir3HP4EsggP/QNo0"
+        usersFile: "/etc/traefik/auth"
+
+tls:
+  certificates:
+    - certFile: /etc/traefik/certificates/mini.iditusi.app.cert
+      keyFile: /etc/traefik/certificates/mini.iditusi.app.key
+    - certFile: /etc/traefik/certificates/www.iditusi.app.cert
+      keyFile: /etc/traefik/certificates/www.iditusi.app.key
+
+certificatesResolvers:
+  cloudflare:
+    acme:
+      email: youremail@email.com
+      storage: acme.json
+      # caServer: https://acme-v02.api.letsencrypt.org/directory # prod (default)
+      caServer: https://acme-staging-v02.api.letsencrypt.org/directory # staging
+      dnsChallenge:
+        provider: cloudflare
+        #disablePropagationCheck: true # uncomment this if you have issues pulling certificates through cloudflare, By setting this flag to true disables the need to wait for the propagation of the TXT record to all authoritative name servers.
+        #delayBeforeCheck: 60s # uncomment along with disablePropagationCheck if needed to ensure the TXT record is ready before verification is attempted
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"

@@ -14,7 +14,6 @@ require (
 	github.com/google/uuid v1.5.0
 	github.com/hjson/hjson-go/v4 v4.4.0
 	github.com/jackc/pgx/v5 v5.5.1
-	github.com/jmoiron/sqlx v1.4.0
 	github.com/knadh/koanf/parsers/dotenv v0.1.0
 	github.com/knadh/koanf/parsers/hjson v0.1.0
 	github.com/knadh/koanf/providers/file v0.1.0
@@ -24,6 +23,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.8.4
+	gopkg.in/telebot.v4 v4.0.0-beta.4
 )
 
 require (
@@ -48,6 +48,7 @@ require (
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
+	github.com/lib/pq v1.10.9 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect

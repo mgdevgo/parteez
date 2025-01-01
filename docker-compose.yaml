@@ -1,6 +1,20 @@
 services:
-  iditusi:
-    image: iditusi/iditusi:latest
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    ports:
+      - 80:80
+      - 443:443
+    labels:
+      - "traefik.enable=true"
+  
+  iditusi-api:
+    image: massand3r/iditusi-api:latest
     build:
       context: .
     container_name: iditusi
@@ -26,10 +40,16 @@ services:
       - 5432:5432
     networks:
       - internal
+    volumes:
+      - ./.pgdata:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+secrets:
+  cf_api_token:
+    file: ./cf_api_token.txt
 
 networks:
   proxy:
