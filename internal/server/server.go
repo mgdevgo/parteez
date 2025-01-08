@@ -6,6 +6,8 @@ import (
 	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/spf13/cobra"
 
 	"iditusi/internal/storage/postgres"
@@ -31,8 +33,20 @@ func New() (*Server, error) {
 		// ReadTimeout:  config.HTTPServer.Timeout * time.Second,
 		// WriteTimeout: config.HTTPServer.Timeout * time.Second,
 		// IdleTimeout:  config.HTTPServer.IdleTimeout * time.Second,
-		// ErrorHandler: api.ErrorHandler(),
+		ErrorHandler: handleError,
 	})
+
+	app.Use(logger.New())
+
+	limiterConfig := limiter.Config{
+		LimitReached: func(ctx *fiber.Ctx) error {
+			return &Error{
+				Status: fiber.StatusTooManyRequests,
+				Code:   string(ErrorCodeRateLimit),
+			}
+		},
+	}
+	app.Use(limiter.New(limiterConfig))
 
 	app.Static("/telegram-mini-app", "./web/mini-app/build")
 

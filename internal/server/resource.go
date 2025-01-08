@@ -1,4 +1,4 @@
-package response
+package server
 
 type Resource struct {
 	ID         string `json:"id"`

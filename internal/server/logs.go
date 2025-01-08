@@ -1,6 +1,10 @@
 package server
 
-import "log/slog"
+import (
+	"iditusi/internal/log/handlers"
+	"log/slog"
+	"os"
+)
 
 // Logger - returns current logger
 func (s *Server) Logger() *slog.Logger {
@@ -16,7 +20,21 @@ func (s *Server) WithDebug(logger *slog.Logger) *Server {
 		return s
 	}
 
-	s.logger = slog.Default()
+	opts := handlers.PrettyHandlerOptions{
+		SlogOpts: &slog.HandlerOptions{
+			Level: slog.LevelDebug,
+		},
+	}
+
+	logger = slog.New(opts.NewPrettyHandler(os.Stdout))
+
+	// logger = slog.New(
+	// 	slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+	// )
+
+	// logger = slog.New(
+	// 	slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+	// )
 
 	return s
 }

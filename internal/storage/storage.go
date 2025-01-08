@@ -35,3 +35,6 @@ type LineUpStorage interface {
 	BaseStorage[models.LineUp]
 }
 
+type ArtworkMetaStorage interface {
+	BaseStorage[models.Artwork]
+}

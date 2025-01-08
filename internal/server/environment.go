@@ -1,4 +1,4 @@
-package environmnet
+package server
 
 type Environment struct {
 	name string

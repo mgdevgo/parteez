@@ -1,4 +1,4 @@
-package api
+package handlers
 
 import (
 	"iditusi/internal/repositories"
