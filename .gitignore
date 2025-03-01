@@ -10,6 +10,6 @@ bin/
 
 .cache/
 
-.pgdata/
+.docker/
 
-.bruno/
+.DS_Store

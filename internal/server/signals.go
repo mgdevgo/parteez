@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-func (s *Server) interceptSignals() {
+func (server *Server) interceptSignals() {
 	c := make(chan os.Signal, 1)
 
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
@@ -20,15 +20,15 @@ func (s *Server) interceptSignals() {
 				log.Printf("Intercepted %q signal", sig)
 				switch sig {
 				case syscall.SIGINT:
-					s.Shutdown()
-					s.WaitForShutdown()
+					server.Shutdown()
+					server.WaitForShutdown()
 					os.Exit(0)
 					// case syscall.SIGTERM:
 					// 	s.Shutdown()
 					// 	s.WaitForShutdown()
 					// 	os.Exit(1)
 				}
-			case <-s.quit:
+			case <-server.quit:
 				return
 			}
 		}

@@ -1,57 +1,51 @@
 services:
-  traefik:
+  pz-proxy:
     image: traefik:v3.0
-    container_name: traefik
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    networks:
-      - proxy
     ports:
       - 80:80
       - 443:443
+    volumes:
+      - ./config/traefik.yaml:/etc/traefik/traefik.yaml
+      
     labels:
       - "traefik.enable=true"
+    depends_on:
+      pz-api:
+      pz-db:
+        condition: service_healthy
   
-  iditusi-api:
-    image: massand3r/iditusi-api:latest
-    build:
-      context: .
-    container_name: iditusi
+  pz-api:
+    image: massand3r/parteez-api:latest
     ports:
       - 8080:8080
-    networks:
-      - proxy
-      - internal
     depends_on:
-      postgres:
+      pz-db:
         condition: service_healthy
 
-  postgres:
+  pz-db:
     image: postgres:latest
-    container_name: postgres
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    # Uncomment to expose ports
     ports:
       - 5432:5432
-    networks:
-      - internal
     volumes:
-      - ./.pgdata:/var/lib/postgresql/data
+      - ./docker/data/pz-db-data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+volumes:
+  pz-db-data:
+    driver: local
 
 secrets:
   cf_api_token:
     file: ./cf_api_token.txt
-
-networks:
-  proxy:
-    external: true
-  internal:

@@ -3,13 +3,13 @@ package server
 import (
 	"errors"
 	"fmt"
-	"iditusi/internal/storage/postgres"
+	"parteez/pkg/postgres"
 
 	"github.com/spf13/cobra"
 )
 
-var iditusiCommand = &cobra.Command{
-	Use: "iditusi",
+var parteezCommand = &cobra.Command{
+	Use: "parteez",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		server, ok := ctx.Value(serverContextKey).(*Server)

@@ -1,4 +1,6 @@
-FROM golang:alpine as builder
+ARG GO_VERSION=1.24
+
+FROM golang:${GO_VERSION}-alpine as build
 
 WORKDIR /build
 
@@ -13,7 +15,7 @@ FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=builder /build/iditusi .
+COPY --from=build /build/iditusi .
 # COPY config/ ..
 
 EXPOSE 8080

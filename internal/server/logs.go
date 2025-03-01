@@ -1,23 +1,23 @@
 package server
 
 import (
-	"iditusi/internal/log/handlers"
+	"parteez/pkg/log/handlers"
 	"log/slog"
 	"os"
 )
 
 // Logger - returns current logger
-func (s *Server) Logger() *slog.Logger {
+func (app *Server) Logger() *slog.Logger {
 	// s.logging.Lock()
 	// defer s.logging.Unlock()
 	// return s.logging.logger
-	return s.logger
+	return app.logger
 }
 
-func (s *Server) WithDebug(logger *slog.Logger) *Server {
+func (app *Server) WithDebug(logger *slog.Logger) *Server {
 	if logger != nil {
-		s.logger = logger
-		return s
+		app.logger = logger
+		return app
 	}
 
 	opts := handlers.PrettyHandlerOptions{
@@ -36,5 +36,5 @@ func (s *Server) WithDebug(logger *slog.Logger) *Server {
 	// 	slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 	// )
 
-	return s
+	return app
 }

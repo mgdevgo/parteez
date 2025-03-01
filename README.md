@@ -1,12 +1,12 @@
-# IdiTusi API
+# Parteez
 
-## Getting started
+# Getting started
 
 ```shell
   make run
 ```
 
-## Minimum Requirements
+# Minimum Requirements
 
 |        | Version                                 |
 |--------|-----------------------------------------|
@@ -14,7 +14,7 @@
 | Docker | Docker Engine 24.00, Docker Compose 3.9 |
 | Make   | GNU Make 4.4.1                          |
 
-## Tech Stack
+# Tech Stack
 
 |       | Description      |
 |-------|------------------|

@@ -85,7 +85,6 @@ func (b *Bot) Run() error {
 		b.setWebhook()
 	}
 
-
 	return nil
 }
 
