@@ -43,16 +43,17 @@ create table if not exists
         description text not null default '',
         genres text[] not null default '{}',
         artwork_id int references artworks (id) on delete set null,
-        date daterange not null default daterange(NULL, NULL, '[]'),
+        date tsrange not null default tsrange(NULL, NULL, '[]'),
         venue_id int references venues (id) on delete set null,
+        lineup jsonb not null default '{}',
         age_restriction int not null default 18,
         promoter varchar(128) not null default '',
         tickets_url text not null default '',
-        tickets jsonb not null default '{}',
-        updated_at timestamptz not null default now(),
-        created_at timestamptz not null default now(),
+        tickets jsonb not null default '[]',
         is_draft boolean not null default true,
         published_at timestamptz,
+        created_at timestamptz not null default now(),
+        updated_at timestamptz not null default now(),
         unique (title, date)
     );
 
@@ -60,17 +61,6 @@ create index if not exists events_date_idx on events using gist (date);
 create index if not exists events_is_public_idx on events (id, published_at)
 where 
     published_at is not null;
-
-create table if not exists
-    lineups (
-        id serial primary key,
-        event_id int not null references events (id) on delete cascade,
-        stage text not null default 'main',
-        timetable jsonb not null default '{}',
-        unique (event_id, stage)
-    );
-
-create index if not exists lineups_event_id_idx on lineups (event_id);
 
 create table if not exists
     genres (

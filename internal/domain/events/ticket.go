@@ -1,4 +1,4 @@
-package event
+package events
 
 type Ticket struct {
 	Title       string

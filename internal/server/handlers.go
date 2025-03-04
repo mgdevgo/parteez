@@ -1,7 +1,7 @@
 package server
 
 import (
-	event "parteez/internal/domain/event/handlers"
+	event "parteez/internal/domain/events/handlers"
 	"parteez/internal/domain/shared"
 	venue "parteez/internal/domain/venue/handlers"
 )

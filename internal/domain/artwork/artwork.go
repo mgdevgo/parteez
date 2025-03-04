@@ -1,5 +1,13 @@
 package artwork
 
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrArtwork = errors.New("artwork")
+var ErrArtworkNotFound = fmt.Errorf("%w: not found", ErrArtwork)
+
 type ArtworkID int
 
 type Artwork struct {

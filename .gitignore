@@ -10,6 +10,6 @@ bin/
 
 .cache/
 
-.docker/
+docker/
 
 .DS_Store

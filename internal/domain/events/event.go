@@ -1,11 +1,12 @@
-package event
+package events
 
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"parteez/internal/domain/artwork"
 	"parteez/internal/domain/venue"
-	"time"
 )
 
 const (
@@ -13,8 +14,9 @@ const (
 )
 
 var (
-	ErrEvent   = errors.New("event")
-	ErrEventID = fmt.Errorf("%w: id", ErrEvent)
+	ErrEvent              = errors.New("event")
+	ErrEventID            = fmt.Errorf("%w: id", ErrEvent)
+	ErrEventAlreadyExists = fmt.Errorf("%w: already exists", ErrEvent)
 )
 
 type EventID int
@@ -32,7 +34,7 @@ type Event struct {
 	Title          string
 	Description    string
 	AgeRestriction int
-	LineUps        []LineUp
+	LineUp         LineUp
 	Genres         []*Genre
 	Promoter       string
 	Date           Date
@@ -43,8 +45,8 @@ type Event struct {
 	Status         Status
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
-	PublishedAt    *time.Time
-	ArchivedAt     *time.Time
+	PublishedAt    time.Time
+	ArchivedAt     time.Time
 }
 
 func NewEvent(id EventID, title, description string, date Date) (*Event, error) {
@@ -59,7 +61,7 @@ func NewEvent(id EventID, title, description string, date Date) (*Event, error) 
 		Title:          title,
 		Description:    description,
 		AgeRestriction: DEFAULT_AGE_RESTRICTION,
-		LineUps:        make([]LineUp, 0),
+		LineUp:         LineUp{},
 		Genres:         make([]*Genre, 0),
 		Promoter:       "",
 		Date:           date,

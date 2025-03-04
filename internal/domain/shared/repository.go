@@ -1,6 +1,9 @@
 package shared
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 type Repository[T any] interface {
 	Save(ctx context.Context, entity T) error
@@ -8,3 +11,5 @@ type Repository[T any] interface {
 	FindById(ctx context.Context, id int) (T, error)
 	Delete(ctx context.Context, id int) error
 }
+
+var ErrDatabase = errors.New("database")

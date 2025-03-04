@@ -7,12 +7,12 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"parteez/internal/domain/event"
+	"parteez/internal/domain/events"
 	"parteez/internal/domain/shared"
 )
 
 type EventHandler struct {
-	eventRepository event.EventRepository
+	eventRepository events.EventRepository
 }
 
 func NewEventHandler() *EventHandler {

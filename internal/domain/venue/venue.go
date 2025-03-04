@@ -1,10 +1,15 @@
 package venue
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	"parteez/internal/domain/artwork"
 )
+
+var ErrVenue = errors.New("venue")
+var ErrVenueNotFound = fmt.Errorf("%w: not found", ErrVenue)
 
 const VENUE_DEFAULT_STAGE = "main"
 

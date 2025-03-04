@@ -1,3 +1,4 @@
+name: parteez
 services:
   pz-proxy:
     image: traefik:v3.0
@@ -14,6 +15,7 @@ services:
       - "traefik.enable=true"
     depends_on:
       pz-api:
+        condition: service_started
       pz-db:
         condition: service_healthy
   
