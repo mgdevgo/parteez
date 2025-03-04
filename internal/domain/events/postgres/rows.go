@@ -1,23 +1,24 @@
 package postgres
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"parteez/internal/domain/artwork"
 	"parteez/internal/domain/events"
+	"parteez/internal/domain/venue"
 )
 
 type eventRow struct {
-	ID             int                     `db:"id"`
-	Title          string                  `db:"title"`
-	Description    string                  `db:"description"`
-	Date           string                  `db:"date"`
+	ID             int    `db:"id"`
+	Title          string `db:"title"`
+	Description    string `db:"description"`
+	Date           string
 	DateRange      pgtype.Range[time.Time] `db:"date"`
-	Genres         string                  `db:"genres"`
+	Genres         []string                `db:"genres"`
 	LineUp         []byte                  `db:"lineup"`
 	ArtworkID      pgtype.Int4             `db:"artwork_id"`
 	VenueID        pgtype.Int4             `db:"venue_id"`
@@ -27,8 +28,9 @@ type eventRow struct {
 	Tickets        []byte                  `db:"tickets"`
 	IsDraft        bool                    `db:"is_draft"`
 	PublishedAt    pgtype.Timestamp        `db:"published_at"`
-	CreatedAt      time.Time               `db:"created_at"`
-	UpdatedAt      time.Time               `db:"updated_at"`
+	// ArchivedAt     pgtype.Timestamp        `db:"archived_at"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }
 
 func eventToRow(event *events.Event) (eventRow, error) {
@@ -37,16 +39,10 @@ func eventToRow(event *events.Event) (eventRow, error) {
 		event.Date.End.Format(time.DateTime),
 	)
 
-	buf := bytes.NewBuffer([]byte{})
-	buf.WriteString("{")
-	for i, genre := range event.Genres {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(genre.Name)
+	genres := make([]string, 0)
+	for _, genre := range event.Genres {
+		genres = append(genres, string(genre))
 	}
-	buf.WriteString("}")
-	genres := buf.String()
 
 	artworkID := int(event.ArtworkID)
 	venueID := int(event.VenueID)
@@ -81,29 +77,57 @@ func eventToRow(event *events.Event) (eventRow, error) {
 		Tickets:        tickets,
 		IsDraft:        draft,
 		PublishedAt:    pgtype.Timestamp{Time: event.PublishedAt, Valid: !event.PublishedAt.IsZero()},
-		CreatedAt:      event.CreatedAt,
-		UpdatedAt:      event.UpdatedAt,
+		// ArchivedAt:     pgtype.Timestamp{Time: event.ArchivedAt, Valid: !event.ArchivedAt.IsZero()},
+		CreatedAt: event.CreatedAt,
+		UpdatedAt: event.UpdatedAt,
 	}, nil
 }
 
-func rowToEvent(row eventRow) events.Event {
-	return events.Event{
+func rowToEvent(row eventRow) (*events.Event, error) {
+	var lineup events.LineUp
+	if err := json.Unmarshal(row.LineUp, &lineup); err != nil {
+		return nil, err
+	}
+
+	genres := make([]events.EventGenre, 0)
+	for _, genre := range row.Genres {
+		genres = append(genres, events.EventGenre(genre))
+	}
+
+	var tickets []events.Ticket
+	if err := json.Unmarshal(row.Tickets, &tickets); err != nil {
+		return nil, err
+	}
+
+	var status events.Status
+	if row.IsDraft {
+		status = events.StatusDraft
+	} else if row.PublishedAt.Valid {
+		status = events.StatusPublished
+	} else {
+		status = events.StatusArchived
+	}
+
+	return &events.Event{
 		ID:             events.EventID(row.ID),
 		Title:          row.Title,
 		Description:    row.Description,
-		AgeRestriction: 0,
-		LineUp:         events.LineUp{},
-		Genres:         []*events.Genre{},
-		Promoter:       "",
-		Date:           events.Date{},
-		TicketsURL:     "",
-		Tickets:        []events.Ticket{},
-		ArtworkID:      0,
-		VenueID:        0,
-		Status:         "",
-		CreatedAt:      time.Time{},
-		UpdatedAt:      time.Time{},
-		PublishedAt:    time.Time{},
-		ArchivedAt:     time.Time{},
-	}
+		AgeRestriction: row.AgeRestriction,
+		LineUp:         lineup,
+		Genres:         genres,
+		Promoter:       row.Promoter,
+		Date: events.Date{
+			Start: row.DateRange.Lower,
+			End:   row.DateRange.Upper,
+		},
+		TicketsURL:  row.TicketsURL,
+		Tickets:     tickets,
+		ArtworkID:   artwork.ArtworkID(row.ArtworkID.Int32),
+		VenueID:     venue.VenueID(row.VenueID.Int32),
+		Status:      status,
+		CreatedAt:   row.CreatedAt,
+		UpdatedAt:   row.UpdatedAt,
+		PublishedAt: row.PublishedAt.Time,
+		// ArchivedAt:  row.ArchivedAt.Time,
+	}, nil
 }

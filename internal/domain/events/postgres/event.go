@@ -131,76 +131,56 @@ RETURNING id`
 	return nil
 }
 
-func (s *EventStorage) FindByDate(ctx context.Context, fromDate time.Time, toDate time.Time) ([]events.Event, error) {
-	const query = "SELECT * FROM event WHERE start_date >= $1 AND end_date <= $2"
+func (s *EventStorage) FindByDate(ctx context.Context, fromDate time.Time, toDate time.Time) ([]*events.Event, error) {
+	const query = "SELECT * FROM events WHERE date && tsrange($1, $2, '[]')"
 	db := s.context.DefaultTrOrDB(ctx, s.pool)
-	result, err := db.Query(ctx, query, fromDate, toDate)
+	result, err := db.Query(ctx, query, fromDate.Format(time.DateTime), toDate.Format(time.DateTime))
 	if err != nil {
-		return []events.Event{}, err
+		return nil, err
 	}
 	rows, err := pgx.CollectRows(result, pgx.RowToStructByName[eventRow])
 	if err != nil {
-		return []events.Event{}, err
+		return nil, err
+	}
+	// var rows []eventRow
+
+	// if err := pgxscan.Select(ctx, db, &rows, query,
+	// 	fromDate.Format(time.DateTime), toDate.Format(time.DateTime),
+	// ); err != nil {
+	// 	return nil, err
+	// }
+
+	results := make([]*events.Event, len(rows))
+	for i, row := range rows {
+		var err error
+		results[i], err = rowToEvent(row)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	events := make([]events.Event, 0)
-	for _, row := range rows {
-		events = append(events, rowToEvent(row))
-	}
-
-	return events, nil
+	return results, nil
 }
 
 func (s *EventStorage) FindAll(ctx context.Context) ([]*events.Event, error) {
-	// const query = "SELECT * FROM event"
-	// db := s.tm.DefaultTrOrDB(ctx, s.pool)
-	// result, err := db.Query(ctx, query)
-	// if err != nil {
-	// 	return []events.Event{}, err
-	// }
-	// rows, err := pgx.CollectRows(result, pgx.RowToStructByName[eventRow])
-
-	// // events := make([]models.Event, 0)
-
-	// rows, err := s.pool.Query(ctx, query)
-	// if err != nil {
-	// 	return []models.Event{}, err
-	// }
-	// events, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Event])
-	// // err := pgxscan.Select(ctx, s.connection, &events, query, params.FromDate, params.Limit, params.Offset)
-	// if err != nil {
-	// 	return []models.Event{}, err
-	// }
-	// return events, nil
-	return nil, nil
+	panic("not implemented")
 }
 
-// func (r *EventRepository) FindAllSorted(ctx context.Context, fromDate time.Time, filter utils2.Filter) ([]models.Event, error) {
-// 	const query = "SELECT * FROM event WHERE start_date >= $1 ORDER BY start_date ASC LIMIT $2 OFFSET $3"
-// 	// events := make([]models.Event, 0)
-//
-// 	rows, err := r.connection.Query(ctx, query, fromDate, filter.Limit, filter.Offset)
-// 	if err != nil {
-// 		return []models.Event{}, err
-// 	}
-// 	events, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Event])
-// 	// err := pgxscan.Select(ctx, s.connection, &events, query, params.FromDate, params.Limit, params.Offset)
-// 	if err != nil {
-// 		return []models.Event{}, err
-// 	}
-// 	return events, nil
-// }
-
-func (s *EventStorage) FindById(ctx context.Context, id int) (events.Event, error) {
+func (s *EventStorage) FindById(ctx context.Context, id events.EventID) (*events.Event, error) {
 	const query = "SELECT * FROM event WHERE id = $1"
 
 	var row eventRow
 	err := pgxscan.Get(ctx, s.pool, &row, query, id)
 	if err != nil {
-		return events.Event{}, err
+		return nil, err
 	}
 
-	return rowToEvent(row), nil
+	event, err := rowToEvent(row)
+	if err != nil {
+		return nil, err
+	}
+
+	return event, nil
 }
 
 func (s *EventStorage) Delete(ctx context.Context, id int) error {

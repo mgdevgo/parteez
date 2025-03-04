@@ -29,13 +29,15 @@ func NewEventID(input int) (EventID, error) {
 	return EventID(input), nil
 }
 
+type EventGenre string
+
 type Event struct {
 	ID             EventID
 	Title          string
 	Description    string
 	AgeRestriction int
 	LineUp         LineUp
-	Genres         []*Genre
+	Genres         []EventGenre
 	Promoter       string
 	Date           Date
 	TicketsURL     string
@@ -62,7 +64,7 @@ func NewEvent(id EventID, title, description string, date Date) (*Event, error) 
 		Description:    description,
 		AgeRestriction: DEFAULT_AGE_RESTRICTION,
 		LineUp:         LineUp{},
-		Genres:         make([]*Genre, 0),
+		Genres:         make([]EventGenre, 0),
 		Promoter:       "",
 		Date:           date,
 		TicketsURL:     "",

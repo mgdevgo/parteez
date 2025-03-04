@@ -11,7 +11,6 @@ import (
 
 type EventService struct {
 	events   events.EventRepository
-	genres   events.GenreRepository
 	venues   venue.VenueRepository
 	artworks artwork.ArtworkRepository
 }

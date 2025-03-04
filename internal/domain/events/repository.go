@@ -12,7 +12,3 @@ type EventRepository interface {
 	FindByDate(ctx context.Context, fromDate time.Time, toDate time.Time) ([]Event, error)
 	// Publish(ctx context.Context, eventId int) error
 }
-
-type GenreRepository interface {
-	shared.Repository[Genre]
-}
