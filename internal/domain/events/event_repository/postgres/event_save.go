@@ -5,38 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"parteez/internal/domain/artwork"
 	"parteez/internal/domain/events"
 	"parteez/internal/domain/shared"
 	"parteez/internal/domain/venue"
 
-	pgxtrm "github.com/avito-tech/go-transaction-manager/drivers/pgxv5/v2"
-	"github.com/georgysavva/scany/v2/pgxscan"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type EventStorage struct {
-	pool    *pgxpool.Pool
-	context *pgxtrm.CtxGetter
-}
-
-func NewEventStorage(pool *pgxpool.Pool, context *pgxtrm.CtxGetter) *EventStorage {
-	return &EventStorage{
-		pool:    pool,
-		context: context,
-	}
-}
-
 func (s *EventStorage) Save(ctx context.Context, event *events.Event) error {
-	// id := "DEFAULT"
-	// if event.ID != 0 {
-	// 	id = fmt.Sprintf("%d", event.ID)
-	// }
-
 	row, err := eventToRow(event)
 	if err != nil {
 		return err
@@ -129,58 +107,6 @@ RETURNING id`
 	}
 
 	return nil
-}
-
-func (s *EventStorage) FindByDate(ctx context.Context, fromDate time.Time, toDate time.Time) ([]*events.Event, error) {
-	const query = "SELECT * FROM events WHERE date && tsrange($1, $2, '[]')"
-	db := s.context.DefaultTrOrDB(ctx, s.pool)
-	result, err := db.Query(ctx, query, fromDate.Format(time.DateTime), toDate.Format(time.DateTime))
-	if err != nil {
-		return nil, err
-	}
-	rows, err := pgx.CollectRows(result, pgx.RowToStructByName[eventRow])
-	if err != nil {
-		return nil, err
-	}
-	// var rows []eventRow
-
-	// if err := pgxscan.Select(ctx, db, &rows, query,
-	// 	fromDate.Format(time.DateTime), toDate.Format(time.DateTime),
-	// ); err != nil {
-	// 	return nil, err
-	// }
-
-	results := make([]*events.Event, len(rows))
-	for i, row := range rows {
-		var err error
-		results[i], err = rowToEvent(row)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return results, nil
-}
-
-func (s *EventStorage) FindAll(ctx context.Context) ([]*events.Event, error) {
-	panic("not implemented")
-}
-
-func (s *EventStorage) FindById(ctx context.Context, id events.EventID) (*events.Event, error) {
-	const query = "SELECT * FROM event WHERE id = $1"
-
-	var row eventRow
-	err := pgxscan.Get(ctx, s.pool, &row, query, id)
-	if err != nil {
-		return nil, err
-	}
-
-	event, err := rowToEvent(row)
-	if err != nil {
-		return nil, err
-	}
-
-	return event, nil
 }
 
 func (s *EventStorage) Delete(ctx context.Context, id int) error {

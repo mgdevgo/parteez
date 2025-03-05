@@ -1,4 +1,4 @@
-package services
+package event_services
 
 import (
 	"context"
@@ -9,13 +9,13 @@ import (
 	"parteez/internal/domain/venue"
 )
 
-type EventService struct {
+type EventCrudService struct {
 	events   events.EventRepository
 	venues   venue.VenueRepository
 	artworks artwork.ArtworkRepository
 }
 
-func (service *EventService) CreateDraft(ctx context.Context) (events.EventID, error) {
+func (service *EventCrudService) CreateDraft(ctx context.Context) (events.EventID, error) {
 
 	now := time.Now()
 	date, err := events.NewDate(now, now.Add(time.Hour*1))
@@ -40,6 +40,6 @@ func (service *EventService) CreateDraft(ctx context.Context) (events.EventID, e
 	return event.ID, nil
 }
 
-func (service *EventService) Publish(id events.EventID) error {
+func (service *EventCrudService) Publish(id events.EventID) error {
 	return nil
 }

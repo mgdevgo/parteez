@@ -2,14 +2,15 @@ package events
 
 import (
 	"context"
-	"parteez/internal/domain/shared"
 	"time"
+
+	"parteez/internal/domain/shared"
 )
 
 type EventUpdate struct {
 }
 
-type EventService interface {
+type EventCrudService interface {
 	CreateDraft(ctx context.Context) (*Event, error)
 	Update(ctx context.Context, id EventID, update EventUpdate) (*Event, error)
 	Publish(ctx context.Context, id EventID) error

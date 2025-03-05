@@ -1,4 +1,4 @@
-package handlers
+package events
 
 import (
 	"fmt"
@@ -7,16 +7,19 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"parteez/internal/domain/events"
 	"parteez/internal/domain/shared"
 )
 
 type EventHandler struct {
-	eventRepository events.EventRepository
+	eventRepository  EventRepository
+	eventCrudService EventCrudService
 }
 
-func NewEventHandler() *EventHandler {
-	return &EventHandler{}
+func NewEventHandler(eventRepository EventRepository, eventCrudService EventCrudService) *EventHandler {
+	return &EventHandler{
+		eventRepository:  eventRepository,
+		eventCrudService: eventCrudService,
+	}
 }
 
 func (h *EventHandler) Register(router fiber.Router) {
