@@ -10,16 +10,18 @@ type VenueHandler struct {
 	venues venue.VenueRepository
 }
 
-func NewVenueHandler() *VenueHandler {
-	return &VenueHandler{}
+func NewVenueHandler(venues venue.VenueRepository) *VenueHandler {
+	return &VenueHandler{
+		venues: venues,
+	}
 }
 
 func (h *VenueHandler) Register(router fiber.Router) {
-	router.Get("/", h.getLocationCollection)
-	router.Get("/:id", h.getLocationById)
+	router.Get("/venue/", h.getVenues)
+	router.Get("/venue/:id", h.getVenue)
 }
 
-func (h *VenueHandler) getLocationCollection(ctx *fiber.Ctx) error {
+func (h *VenueHandler) getVenues(ctx *fiber.Ctx) error {
 	result, err := h.venues.FindAll(ctx.Context())
 	if err != nil {
 		return err
@@ -28,8 +30,12 @@ func (h *VenueHandler) getLocationCollection(ctx *fiber.Ctx) error {
 	return ctx.JSON(result)
 }
 
-func (h *VenueHandler) getLocationById(ctx *fiber.Ctx) error {
-	id, _ := ctx.ParamsInt("id", 0)
+func (h *VenueHandler) getVenue(ctx *fiber.Ctx) error {
+	id, err := ctx.ParamsInt("id", 0)
+	if err != nil {
+		return err
+	}
+
 	result, err := h.venues.FindById(ctx.Context(), id)
 	if err != nil {
 		return err

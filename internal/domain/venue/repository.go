@@ -2,11 +2,11 @@ package venue
 
 import (
 	"context"
-	"parteez/internal/domain/shared"
+
+	"parteez/internal/domain/shared/repository"
 )
 
 type VenueRepository interface {
-	shared.Repository[*Venue]
+	repository.Repository[*Venue]
 	FindByName(ctx context.Context, name string) (*Venue, error)
-	// Show(ctx context.Context, locationId int) error
 }
