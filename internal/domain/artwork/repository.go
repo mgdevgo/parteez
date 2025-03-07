@@ -1,7 +1,7 @@
 package artwork
 
-import "parteez/internal/domain/shared"
+import "parteez/internal/domain/shared/repository"
 
 type ArtworkRepository interface {
-	shared.Repository[Artwork]
+	repository.Repository[Artwork]
 }

@@ -1,9 +1,7 @@
-package shared
+package handler
 
 import (
 	"encoding/json"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 // ErrorType is the list of allowed values for the error's type.
@@ -21,6 +19,7 @@ type ErrorCode string
 const (
 	ErrorCodeRateLimit                   ErrorCode = "rate_limit"
 	ErrorCodeNotAllowedOnStandardAccount ErrorCode = "not_allowed_on_standard_account"
+	ErrorCodeDateRangeInvalid            ErrorCode = "date_range_invalid"
 	ErrorCodeParameterInvalidEmpty       ErrorCode = "parameter_invalid_empty"
 	ErrorCodeParameterInvalidInteger     ErrorCode = "parameter_invalid_integer"
 	ErrorCodeParameterInvalidStringBlank ErrorCode = "parameter_invalid_string_blank"
@@ -80,9 +79,9 @@ type ForbiddenResponse struct {
 	Errors []Error
 }
 
-func NewInvalidRequestError(code ErrorCode, title string, details ...string) *Error {
+func NewHTTPError(status int, code ErrorCode, title string, details ...string) *Error {
 	error := &Error{
-		Status: fiber.StatusBadRequest,
+		Status: status,
 		Code:   string(code),
 		Title:  title,
 	}

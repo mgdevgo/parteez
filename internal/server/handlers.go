@@ -3,19 +3,20 @@ package server
 import (
 	event "parteez/internal/domain/events"
 	"parteez/internal/domain/shared"
-	venue "parteez/internal/domain/venue/handlers"
+	"parteez/internal/domain/venue"
+	venueHandler "parteez/internal/domain/venue/handler"
 )
 
 type Handlers struct {
 	health *shared.HealthHandler
 	events *event.EventHandler
-	venues *venue.VenueHandler
+	venues *venueHandler.VenueHandler
 }
 
-func NewHandlers(eventRepository event.EventRepository, eventCrudService event.EventCrudService) *Handlers {
+func NewHandlers(eventRepository event.EventRepository, eventCrudService event.EventCrudService, venueRepository venue.VenueRepository) *Handlers {
 	return &Handlers{
 		health: shared.NewHealthHandler(),
 		events: event.NewEventHandler(eventRepository, eventCrudService),
-		venues: venue.NewVenueHandler(),
+		venues: venueHandler.NewVenueHandler(venueRepository),
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/cobra"
 
-	"parteez/internal/domain/shared"
+	"parteez/internal/domain/shared/handler"
 	"parteez/internal/telegram"
 )
 
@@ -28,22 +28,25 @@ type Server struct {
 }
 
 func New() (*Server, error) {
+
+	errorHandler := handler.NewErrorHandler(nil)
+
 	app := fiber.New(fiber.Config{
 		AppName: fmt.Sprintf("parteez v%s", VERSION),
 		// DisableStartupMessage: true,
 		// ReadTimeout:  config.HTTPServer.Timeout * time.Second,
 		// WriteTimeout: config.HTTPServer.Timeout * time.Second,
 		// IdleTimeout:  config.HTTPServer.IdleTimeout * time.Second,
-		ErrorHandler: shared.NewErrorHandler(),
+		ErrorHandler: errorHandler.Handle,
 	})
 
 	app.Use(logger.New())
 
 	limiterConfig := limiter.Config{
 		LimitReached: func(ctx *fiber.Ctx) error {
-			return &shared.Error{
+			return &handler.Error{
 				Status: fiber.StatusTooManyRequests,
-				Code:   string(shared.ErrorCodeRateLimit),
+				Code:   string(handler.ErrorCodeRateLimit),
 			}
 		},
 	}

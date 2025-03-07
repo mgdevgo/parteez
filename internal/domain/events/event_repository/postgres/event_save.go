@@ -8,7 +8,7 @@ import (
 
 	"parteez/internal/domain/artwork"
 	"parteez/internal/domain/events"
-	"parteez/internal/domain/shared"
+	"parteez/internal/domain/shared/repository"
 	"parteez/internal/domain/venue"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -98,7 +98,7 @@ RETURNING id`
 				}
 			}
 		}
-		return fmt.Errorf("%w: %w", shared.ErrDatabase, err)
+		return fmt.Errorf("%w: %w", repository.ErrDatabase, err)
 	}
 
 	event.ID, err = events.NewEventID(row.ID)
