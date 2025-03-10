@@ -66,7 +66,7 @@ func New() (*Server, error) {
 		},
 	}
 
-	// Start signal intercepter
+	server.configureRoutes()
 	server.interceptSignals()
 
 	return server, nil
