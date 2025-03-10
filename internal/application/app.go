@@ -1,7 +1,6 @@
-package server
+package application
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 
@@ -13,9 +12,11 @@ import (
 
 	"parteez/internal/domain/shared/handler"
 	"parteez/internal/telegram"
+	"parteez/pkg/environment"
 )
 
-type Server struct {
+type Application struct {
+	env              environment.Environment
 	http             *fiber.App
 	storage          *pgxpool.Pool
 	backgroundJobs   []string
@@ -27,22 +28,25 @@ type Server struct {
 	shutdownComplete chan struct{}
 }
 
-func New() (*Server, error) {
+func New(env ...environment.Environment) (*Application, error) {
+	appenv := environment.Development
+	if len(env) > 0 {
+		appenv = env[0]
+	}
 
 	errorHandler := handler.NewErrorHandler(nil)
 
-	app := fiber.New(fiber.Config{
+	fiberConfig := fiber.Config{
 		AppName: fmt.Sprintf("parteez v%s", VERSION),
 		// DisableStartupMessage: true,
 		// ReadTimeout:  config.HTTPServer.Timeout * time.Second,
 		// WriteTimeout: config.HTTPServer.Timeout * time.Second,
 		// IdleTimeout:  config.HTTPServer.IdleTimeout * time.Second,
 		ErrorHandler: errorHandler.Handle,
-	})
+	}
+	fiberApp := fiber.New(fiberConfig)
 
-	app.Use(logger.New())
-
-	limiterConfig := limiter.Config{
+	rateLimitConfig := limiter.Config{
 		LimitReached: func(ctx *fiber.Ctx) error {
 			return &handler.Error{
 				Status: fiber.StatusTooManyRequests,
@@ -50,47 +54,61 @@ func New() (*Server, error) {
 			}
 		},
 	}
-	app.Use(limiter.New(limiterConfig))
 
-	app.Static("/telegram-mini-app", "./web/mini-app/build")
+	fiberApp.Use(
+		limiter.New(rateLimitConfig),
+		logger.New(),
+	)
 
-	server := &Server{
-		http:             app,
+	fiberApp.Static("/telegram-mini-app", "./web/mini-app/build")
+
+	application := &Application{
+		env:              appenv,
+		http:             fiberApp,
 		quit:             make(chan struct{}),
 		shutdownComplete: make(chan struct{}),
-		commands: []*cobra.Command{
-			parteezCommand, // root command
-			serveCommand,
-			routesCommand,
-			migrateCommand,
-		},
+		backgroundJobs:   make([]string, 0),
+		commands:         make([]*cobra.Command, 0),
 	}
 
-	server.configureRoutes()
-	server.interceptSignals()
+	application.configureRoutes()
+	application.configureCommands()
 
-	return server, nil
+	return application, nil
 }
 
-type contextKey string
-
-var serverContextKey contextKey = "parteez-server"
-
-func (server *Server) Start(args []string) error {
-	parteez := server.commands[0]
-
-	for _, cmd := range server.commands[1:] {
-		parteez.AddCommand(cmd)
+func (app *Application) Start(args []string) error {
+	combinedCommands := &cobra.Command{
+		Use: "parteez",
 	}
 
-	parteez.SetArgs(args)
+	for _, command := range app.commands {
+		combinedCommands.AddCommand(command)
+	}
 
-	ctx := context.WithValue(context.Background(), serverContextKey, server)
+	combinedCommands.SetArgs(args)
 
-	return parteez.ExecuteContext(ctx)
+	ctx := contextWithApplication(combinedCommands.Context(), app)
+
+	return combinedCommands.ExecuteContext(ctx)
 }
 
-func (server *Server) Shutdown() {
+func (app *Application) Execute() error {
+	go func() {
+		if err := app.http.Listen(":8080"); err != nil {
+			app.logger.Error("Failed to start http server", "error", err)
+			close(app.quit)
+		}
+	}()
+
+	app.interceptSignals()
+
+	app.WaitForShutdown()
+
+	return nil
+}
+
+func (server *Application) Shutdown() {
 
 	// Sguttdown http server
 	server.http.Shutdown()
@@ -108,6 +126,6 @@ func (server *Server) Shutdown() {
 }
 
 // WaitForShutdown will block until the server has been fully shutdown.
-func (server *Server) WaitForShutdown() {
+func (server *Application) WaitForShutdown() {
 	<-server.shutdownComplete
 }

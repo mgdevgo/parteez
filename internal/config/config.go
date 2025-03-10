@@ -37,7 +37,7 @@ type HTTPServer struct {
 //	k := koanf.New(".")
 // }
 
-func loadConfig() *Config {
+func Load() *Config {
 	k := koanf.New(".")
 
 	// //p := env.Provider("PARTEEZ_")

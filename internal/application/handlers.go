@@ -1,4 +1,4 @@
-package server
+package application
 
 import (
 	event "parteez/internal/domain/events"

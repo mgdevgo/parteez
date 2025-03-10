@@ -1,4 +1,4 @@
-package server
+package application
 
 const (
 	// VERSION is the current version for the server.

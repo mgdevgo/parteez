@@ -1,4 +1,4 @@
-package server
+package environment
 
 type Environment struct {
 	name string
@@ -29,4 +29,12 @@ func Detect(from []string) Environment {
 	default:
 		return Development
 	}
+}
+
+func Custom(name string) Environment {
+	return Environment{name: name}
+}
+
+func (env Environment) IsRelease() bool {
+	return env == Production
 }

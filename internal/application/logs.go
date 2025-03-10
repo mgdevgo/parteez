@@ -1,20 +1,21 @@
-package server
+package application
 
 import (
-	"parteez/pkg/log/handlers"
 	"log/slog"
 	"os"
+
+	"parteez/pkg/log/handlers"
 )
 
 // Logger - returns current logger
-func (app *Server) Logger() *slog.Logger {
+func (app *Application) Logger() *slog.Logger {
 	// s.logging.Lock()
 	// defer s.logging.Unlock()
 	// return s.logging.logger
 	return app.logger
 }
 
-func (app *Server) WithDebug(logger *slog.Logger) *Server {
+func (app *Application) WithDebug(logger *slog.Logger) *Application {
 	if logger != nil {
 		app.logger = logger
 		return app
