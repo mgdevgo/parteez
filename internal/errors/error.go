@@ -9,8 +9,8 @@ type ErrorType string
 
 // List of values that ErrorType can take.
 const (
-	ErrorTypeAPI            ErrorType = "API_ERROR"
-	ErrorTypeInvalidRequest ErrorType = "INVALID_REQUEST_ERROR"
+	ErrorTypeAPI            ErrorType = "api_error"
+	ErrorTypeInvalidRequest ErrorType = "invalid_request_error"
 )
 
 // ErrorCode is the list of allowed values for the error's code.
@@ -19,14 +19,14 @@ type ErrorCode string
 const (
 	ErrorCodeRateLimit                   ErrorCode = "rate_limit"
 	ErrorCodeNotAllowedOnStandardAccount ErrorCode = "not_allowed_on_standard_account"
-	ErrorCodeDateRangeInvalid            ErrorCode = "date_range_invalid"
+	ErrorCodeParameterInvalidDate        ErrorCode = "parameter_invalid_date"
 	ErrorCodeParameterInvalidEmpty       ErrorCode = "parameter_invalid_empty"
 	ErrorCodeParameterInvalidInteger     ErrorCode = "parameter_invalid_integer"
-	ErrorCodeParameterInvalidStringBlank ErrorCode = "parameter_invalid_string_blank"
 	ErrorCodeParameterInvalidStringEmpty ErrorCode = "parameter_invalid_string_empty"
 	ErrorCodeParameterMissing            ErrorCode = "parameter_missing"
-	ErrorCodeServerError                 ErrorCode = "server_error"
 	ErrorCodeNotFound                    ErrorCode = "not_found"
+	ErrorCodeResourceAlreadyExists       ErrorCode = "resource_already_exists"
+	ErrorCodeResourceMissing             ErrorCode = "resource_missing"
 )
 
 // Error is the response returned when a call is unsuccessful.

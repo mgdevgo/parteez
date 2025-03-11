@@ -1,7 +1,6 @@
 package events
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -41,8 +40,8 @@ func (h *EventHandler) handleGetEvents(ctx *fiber.Ctx) error {
 	loc, _ := time.LoadLocation("Europe/Moscow")
 	_ = time.Now().In(loc)
 
-	from := ctx.Query("fromDate", "")
-	to := ctx.Query("toDate", "")
+	from := ctx.Query("fromDate")
+	to := ctx.Query("toDate")
 
 	if from == "" || to == "" {
 		return errors.NewHTTPError(fiber.StatusBadRequest, errors.ErrorCodeParameterMissing, "Query parameter 'fromDate' or 'toDate' is missing.")
@@ -50,13 +49,11 @@ func (h *EventHandler) handleGetEvents(ctx *fiber.Ctx) error {
 
 	fromDate, err := time.Parse(time.DateOnly, from)
 	if err != nil {
-		fmt.Println(err)
-		return errors.NewHTTPError(fiber.StatusBadRequest, errors.ErrorCodeParameterInvalidStringBlank, "Query parameter 'fromDate' is invalid.", "URL Parameter 'fromDate' must implement RFC3339 format.")
+		return errors.NewHTTPError(fiber.StatusBadRequest, errors.ErrorCodeParameterInvalidDate, "Query parameter 'fromDate' is invalid.", "Query parameter 'fromDate' must implement RFC3339 format.")
 	}
 	toDate, err := time.Parse(time.DateOnly, to)
 	if err != nil {
-		fmt.Println(err)
-		return errors.NewHTTPError(fiber.StatusBadRequest, errors.ErrorCodeParameterInvalidStringBlank, "Query parameter 'toDate' is invalid.", "URL Parameter 'toDate' must implement RFC3339 format.")
+		return errors.NewHTTPError(fiber.StatusBadRequest, errors.ErrorCodeParameterInvalidDate, "Query parameter 'toDate' is invalid.", "Query parameter 'toDate' must implement RFC3339 format.")
 	}
 
 	events, err := h.eventRepository.FindByDate(ctx.Context(), fromDate, toDate)
