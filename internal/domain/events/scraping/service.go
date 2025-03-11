@@ -2,9 +2,11 @@ package scraping
 
 import "context"
 
+type Data map[string]any
+
 type ScrapingService interface {
 	// FetchData(sources []int) chan any
-	Scrape(ctx context.Context) chan any
+	Scrape(ctx context.Context) chan Data
 }
 
 // type EventSourceService interface {

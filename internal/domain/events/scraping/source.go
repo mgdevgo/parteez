@@ -9,5 +9,5 @@ const (
 
 type Source interface {
 	ID() string
-	Parse() chan any
+	Parse() chan Result
 }

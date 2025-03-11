@@ -1,9 +1,8 @@
 package scraping
 
 import (
-	"fmt"
+	"log/slog"
 	"net/url"
-	"time"
 
 	"github.com/gocolly/colly/v2"
 )
@@ -12,11 +11,12 @@ type Website struct {
 	domain    string
 	url       string
 	collector *colly.Collector
-	result    chan any
+	result    chan Result
 	debug     bool
+	logger    *slog.Logger
 }
 
-func NewWebsite(URL string, collector *colly.Collector) (*Website, error) {
+func NewWebsite(URL string, logger *slog.Logger) (*Website, error) {
 	parsedURL, err := url.Parse(URL)
 	if err != nil {
 		return nil, err
@@ -28,48 +28,53 @@ func NewWebsite(URL string, collector *colly.Collector) (*Website, error) {
 		colly.UserAgent(USER_AGENTS[0]),
 	)
 
-	if err := c.Limit(&colly.LimitRule{
-		RandomDelay: 2 * time.Second,
-	}); err != nil {
-		return nil, err
-	}
+	// limitRule := &colly.LimitRule{
+	// 	RandomDelay: 2 * time.Second,
+	// }
+	// if err := limitRule.Init(); err != nil {
+	// 	return nil, err
+	// }
+	// if err := c.Limit(limitRule); err != nil {
+	// 	return nil, err
+	// }
 
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Printf("%s | visiting URL: %s\n", name, r.URL.String())
+		logger.Info("Requesting website", "url", r.URL.String())
 	})
 
-	ruleFunc, ok := scrapingRules[name]
-	if !ok {
-		return nil, fmt.Errorf("source %s not found", name)
-	}
-
-	site := Website{
+	site := &Website{
 		domain:    name,
 		url:       URL,
-		collector: collector,
-		result:    make(chan any),
+		collector: c,
+		result:    make(chan Result),
 	}
 
-	ruleFunc(c, site.result)
-
-	return &site, nil
+	return site, nil
 }
 
-func (page *Website) Parse() chan any {
-	page.collector.Visit(page.url)
+func (w *Website) Collector() *colly.Collector {
+	return w.collector
+}
+
+func (w *Website) Result(result Result) {
+	w.result <- result
+}
+
+func (w *Website) Parse() chan Result {
+	w.collector.Visit(w.url)
 
 	go func() {
-		page.collector.Wait()
-		close(page.result)
+		w.collector.Wait()
+		close(w.result)
 	}()
 
-	return page.result
+	return w.result
 }
 
-func (site *Website) ID() string {
-	return site.domain
+func (w *Website) ID() string {
+	return w.domain
 }
 
-func (site *Website) Debug(debug bool) {
-	site.debug = debug
+func (w *Website) Debug(debug bool) {
+	w.debug = debug
 }

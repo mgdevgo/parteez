@@ -5,8 +5,8 @@ type LineUp struct {
 	Stages  []Stage  `json:"stages"`
 }
 
-func NewLineUp(artists []string, stages []Stage) *LineUp {
-	return &LineUp{
+func NewLineUp(artists []string, stages []Stage) LineUp {
+	return LineUp{
 		Artists: artists,
 		Stages:  stages,
 	}
