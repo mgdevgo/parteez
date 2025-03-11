@@ -8,7 +8,7 @@ import (
 
 	"parteez/internal/domain/artwork"
 	"parteez/internal/domain/events"
-	"parteez/internal/domain/shared/repository"
+	"parteez/internal/repository"
 	"parteez/internal/domain/venue"
 
 	"github.com/jackc/pgx/v5/pgconn"

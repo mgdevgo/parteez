@@ -45,7 +45,7 @@ func (s *EventStorage) FindAll(ctx context.Context) ([]*events.Event, error) {
 	panic("not implemented")
 }
 
-func (s *EventStorage) FindById(ctx context.Context, id events.EventID) (*events.Event, error) {
+func (s *EventStorage) FindById(ctx context.Context, id int) (*events.Event, error) {
 	const query = "SELECT * FROM event WHERE id = $1"
 
 	var row eventRow

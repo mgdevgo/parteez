@@ -1,41 +1,36 @@
-package application
+package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-const applicationContextKey = "application"
+// const applicationContextKey = "application"
 
-func contextWithApplication(ctx context.Context, application *Application) context.Context {
-	return context.WithValue(ctx, applicationContextKey, application)
-}
+// func contextWithApplication(ctx context.Context, application *Application) context.Context {
+// 	return context.WithValue(ctx, applicationContextKey, application)
+// }
 
-func applicationFromContext(ctx context.Context) (*Application, error) {
-	application, ok := ctx.Value(applicationContextKey).(*Application)
-	if !ok {
-		return nil, errors.New("application not set on context")
-	}
-	return application, nil
-}
-
-func (app *Application) configureCommands() {
-	app.commands = append(app.commands, parteezCommand())
-}
+// func applicationFromContext(ctx context.Context) (*Application, error) {
+// 	application, ok := ctx.Value(applicationContextKey).(*Application)
+// 	if !ok {
+// 		return nil, errors.New("application not set on context")
+// 	}
+// 	return application, nil
+// }
 
 func parteezCommand() *cobra.Command {
 	return &cobra.Command{
 		Use: "parteez",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			app, err := applicationFromContext(ctx)
-			if err != nil {
-				return err
-			}
-			return app.Start(args)
+			// ctx := cmd.Context()
+			// app, err := applicationFromContext(ctx)
+			// if err != nil {
+			// 	return err
+			// }
+			// return app.Start(args)
+			return nil
 		},
 	}
 }
@@ -54,15 +49,15 @@ func routesCommand() *cobra.Command {
 		Use:   "routes",
 		Short: "Displays all registered routes.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			app, err := applicationFromContext(ctx)
-			if err != nil {
-				return err
-			}
-			routes := app.http.GetRoutes()
-			for _, route := range routes {
-				fmt.Println(route.Path, route.Method)
-			}
+			// ctx := cmd.Context()
+			// app, err := applicationFromContext(ctx)
+			// if err != nil {
+			// 	return err
+			// }
+			// routes := app.http.GetRoutes()
+			// for _, route := range routes {
+			// 	fmt.Println(route.Path, route.Method)
+			// }
 			return nil
 		},
 	}
@@ -73,12 +68,13 @@ func serveCommand() *cobra.Command {
 		Use:   "serve",
 		Short: "Begins serving the app over HTTP.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			app, err := applicationFromContext(ctx)
-			if err != nil {
-				return err
-			}
-			return app.Start(args)
+			// ctx := cmd.Context()
+			// app, err := applicationFromContext(ctx)
+			// if err != nil {
+			// 	return err
+			// }
+			// return app.Start(args)
+			return nil
 		},
 	}
 

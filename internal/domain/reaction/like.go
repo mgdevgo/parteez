@@ -1,4 +1,4 @@
-package reactions
+package reaction
 
 type Like struct {
 	ID      int

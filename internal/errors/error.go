@@ -1,4 +1,4 @@
-package handler
+package errors
 
 import (
 	"encoding/json"
@@ -25,6 +25,8 @@ const (
 	ErrorCodeParameterInvalidStringBlank ErrorCode = "parameter_invalid_string_blank"
 	ErrorCodeParameterInvalidStringEmpty ErrorCode = "parameter_invalid_string_empty"
 	ErrorCodeParameterMissing            ErrorCode = "parameter_missing"
+	ErrorCodeServerError                 ErrorCode = "server_error"
+	ErrorCodeNotFound                    ErrorCode = "not_found"
 )
 
 // Error is the response returned when a call is unsuccessful.

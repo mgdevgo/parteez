@@ -6,18 +6,19 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"parteez/internal/domain/shared/handler"
+	"parteez/internal/domain/events"
+	"parteez/internal/errors"
 )
 
 type EventHandler struct {
-	eventRepository  EventRepository
-	eventCrudService EventCrudService
+	eventRepository  events.EventRepository
+	eventCrudService events.EventCrudService
 }
 
-func NewEventHandler(eventRepository EventRepository, eventCrudService EventCrudService) *EventHandler {
+func NewEventHandler(eventRepository events.EventRepository, crudService events.EventCrudService) *EventHandler {
 	return &EventHandler{
 		eventRepository:  eventRepository,
-		eventCrudService: eventCrudService,
+		eventCrudService: crudService,
 	}
 }
 
@@ -44,18 +45,18 @@ func (h *EventHandler) handleGetEvents(ctx *fiber.Ctx) error {
 	to := ctx.Query("toDate", "")
 
 	if from == "" || to == "" {
-		return handler.NewHTTPError(fiber.StatusBadRequest, handler.ErrorCodeParameterMissing, "Query parameter 'fromDate' or 'toDate' is missing.")
+		return errors.NewHTTPError(fiber.StatusBadRequest, errors.ErrorCodeParameterMissing, "Query parameter 'fromDate' or 'toDate' is missing.")
 	}
 
 	fromDate, err := time.Parse(time.DateOnly, from)
 	if err != nil {
 		fmt.Println(err)
-		return handler.NewHTTPError(fiber.StatusBadRequest, handler.ErrorCodeParameterInvalidStringBlank, "Query parameter 'fromDate' is invalid.", "URL Parameter 'fromDate' must implement RFC3339 format.")
+		return errors.NewHTTPError(fiber.StatusBadRequest, errors.ErrorCodeParameterInvalidStringBlank, "Query parameter 'fromDate' is invalid.", "URL Parameter 'fromDate' must implement RFC3339 format.")
 	}
 	toDate, err := time.Parse(time.DateOnly, to)
 	if err != nil {
 		fmt.Println(err)
-		return handler.NewHTTPError(fiber.StatusBadRequest, handler.ErrorCodeParameterInvalidStringBlank, "Query parameter 'toDate' is invalid.", "URL Parameter 'toDate' must implement RFC3339 format.")
+		return errors.NewHTTPError(fiber.StatusBadRequest, errors.ErrorCodeParameterInvalidStringBlank, "Query parameter 'toDate' is invalid.", "URL Parameter 'toDate' must implement RFC3339 format.")
 	}
 
 	events, err := h.eventRepository.FindByDate(ctx.Context(), fromDate, toDate)
@@ -79,7 +80,7 @@ func (h *EventHandler) handleGetEvent(ctx *fiber.Ctx) error {
 	}
 
 	if id == 0 {
-		return handler.NewHTTPError(fiber.StatusBadRequest, handler.ErrorCodeParameterInvalidInteger, "Path parameter 'id' must be a number, greater than 0.")
+		return errors.NewHTTPError(fiber.StatusBadRequest, errors.ErrorCodeParameterInvalidInteger, "Path parameter 'id' must be a number, greater than 0.")
 	}
 
 	event, err := h.eventRepository.FindById(ctx.Context(), id)

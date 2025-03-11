@@ -115,8 +115,15 @@ func (storage *VenueStorage) FindById(ctx context.Context, id int) (*venue.Venue
 	return venues[0], nil
 }
 
-func (storage *VenueStorage) FindByName(ctx context.Context, name string) ([]*venue.Venue, error) {
-	return storage.findByFilter(ctx, filterByName(name))
+func (storage *VenueStorage) FindByName(ctx context.Context, name string) (*venue.Venue, error) {
+	venues, err := storage.findByFilter(ctx, filterByName(name))
+	if err != nil {
+		return nil, err
+	}
+	if len(venues) == 0 {
+		return nil, venue.ErrVenueNotFound
+	}
+	return venues[0], nil
 }
 
 func (storage *VenueStorage) FindAll(ctx context.Context) ([]*venue.Venue, error) {

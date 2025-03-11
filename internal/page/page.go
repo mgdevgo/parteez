@@ -1,4 +1,4 @@
-package shared
+package page
 
 type Page struct {
 	Number int

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -29,7 +30,7 @@ func New(URL string) (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	if err := runMigrations(); err != nil {
+	if err := runMigrations(URL); err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -37,11 +38,11 @@ func New(URL string) (*pgxpool.Pool, error) {
 }
 
 // RunMigrations runs all pending migrations from the specified migrations directory using an existing database connection
-func runMigrations() error {
+func runMigrations(URL string) error {
 	const op = "pkg.postgres.runMigrations"
 	m, err := migrate.New(
 		"file://migrations",
-		"postgres",
+		strings.Replace(URL, "postgres://", "pgx5://", 1),
 	)
 	if err != nil {
 		return fmt.Errorf("%s: failed to create migrate instance: %w", op, err)

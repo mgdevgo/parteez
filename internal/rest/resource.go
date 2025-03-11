@@ -1,4 +1,4 @@
-package shared
+package rest
 
 type Resource struct {
 	ID         string `json:"id"`

@@ -3,7 +3,7 @@ package venue
 import (
 	"context"
 
-	"parteez/internal/domain/shared/repository"
+	"parteez/internal/repository"
 )
 
 type VenueRepository interface {

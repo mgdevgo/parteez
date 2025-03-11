@@ -1,4 +1,4 @@
-package shared
+package health
 
 import (
 	"time"
@@ -14,7 +14,7 @@ func NewHealthHandler() *HealthHandler {
 }
 
 func (h *HealthHandler) checkHealth(ctx *fiber.Ctx) error {
-	return ctx.JSONP(fiber.Map{
+	return ctx.JSON(fiber.Map{
 		"status": "OK",
 		"time":   time.Now(),
 	})
@@ -22,4 +22,9 @@ func (h *HealthHandler) checkHealth(ctx *fiber.Ctx) error {
 
 func (h *HealthHandler) Register(router fiber.Router) {
 	router.Get("/", h.checkHealth)
+}
+
+func RegisterRoutes(router fiber.Router) {
+	healthHandler := NewHealthHandler()
+	healthHandler.Register(router)
 }
