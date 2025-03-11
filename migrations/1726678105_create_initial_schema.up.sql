@@ -12,14 +12,22 @@ create table if not exists
         text_color_4 char(6)
     );
 
-create type venue_type as enum(
-    'DEFAULT',
-    'CLUB',
-    'BAR',
-    'CAFE',
-    'CONCERT_HALL',
-    'SPACE'
-);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_type WHERE typname = 'venue_type'
+    ) THEN
+        CREATE TYPE venue_type AS ENUM (
+            'DEFAULT',
+            'CLUB',
+            'BAR',
+            'CAFE',
+            'CONCERT_HALL',
+            'SPACE'
+        );
+    END IF;
+END
+$$;
 
 create table if not exists
     venues (
