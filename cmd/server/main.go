@@ -65,10 +65,14 @@ func run(args []string) error {
 		},
 	}
 
+	recoverConfig := recover.Config{
+		EnableStackTrace: true,
+	}
+
 	app.Use(
 		limiter.New(rateLimitConfig),
 		slogfiber.New(logger),
-		recover.New(),
+		recover.New(recoverConfig),
 	)
 
 	app.Static("/telegram-mini-app", "./web/mini-app/build")
