@@ -1,24 +1,33 @@
-# Parteez
+<h1 align="center"> 
+    Parteez
+</h1>
+<p align="center">A modern event management platform built with Go</p>
 
-# Getting started
+## Getting Started
 
 ```shell
   make run
 ```
 
-# Minimum Requirements
+## Requirements
 
-|        | Version                                 |
-|--------|-----------------------------------------|
-| Go     | 1.21                                    |
-| Docker | Docker Engine 24.00, Docker Compose 3.9 |
-| Make   | GNU Make 4.4.1                          |
+| Component | Version |
+|-----------|---------|
+| Go | 1.24.0 |
+| PostgreSQL | Latest |
+| Make | GNU Make 4.4.1 |
+| Docker | Docker Engine 24.00 |
+| Docker Compose | 3.9 |
 
-# Tech Stack
+## Tech Stack
 
-|       | Description      |
-|-------|------------------|
-| Fiber | HTTP framework   |
-| PGX   | Postgres toolkit |
+- **Go** - Core programming language
+- **Fiber** - Fast HTTP web framework
+- **PGX** - PostgreSQL driver and toolkit
+- **Koanf** - Configuration management
+- **golang-migrate** - Database migration tool
+- **slog** - Structured logging
+- **testify** - Testing framework
+- **swaggo** - Swagger/OpenAPI documentation generator
 
 
