@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	slogfiber "github.com/samber/slog-fiber"
@@ -70,6 +72,8 @@ func run(args []string) error {
 	}
 
 	app.Use(
+		cors.New(),
+		helmet.New(),
 		limiter.New(rateLimitConfig),
 		slogfiber.New(logger),
 		recover.New(recoverConfig),
