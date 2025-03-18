@@ -17,11 +17,11 @@ import (
 	slogfiber "github.com/samber/slog-fiber"
 
 	"parteez/internal/config"
-	eventHandler "parteez/internal/domain/events/handler"
-	eventStorage "parteez/internal/domain/events/postgres"
-	eventService "parteez/internal/domain/events/service"
-	venueHandler "parteez/internal/domain/venue/handler"
-	venueStorage "parteez/internal/domain/venue/postgres"
+	eventhttp "parteez/internal/domain/events/handler"
+	eventstore "parteez/internal/domain/events/postgres"
+	eventservice "parteez/internal/domain/events/service"
+	venuehttp "parteez/internal/domain/venue/handler"
+	venuestore "parteez/internal/domain/venue/postgres"
 	"parteez/internal/errors"
 	"parteez/internal/health"
 	"parteez/internal/version"
@@ -81,19 +81,15 @@ func run(args []string) error {
 
 	app.Static("/telegram-mini-app", "./web/mini-app/build")
 
-	eventRepository := eventStorage.NewEventStorage(db, nil)
-	venueRepository := venueStorage.NewVenueStorage(db, nil)
-	eventCrudService := eventService.NewEventCrudService(eventRepository, venueRepository, nil)
+	eventRepository := eventstore.NewEventStorage(db, nil)
+	venueRepository := venuestore.NewVenueStorage(db, nil)
+	eventCrudService := eventservice.NewEventCrudService(eventRepository, venueRepository, nil)
 
-	eventHandler := eventHandler.NewEventHandler(eventRepository, eventCrudService)
-	venueHandler := venueHandler.NewVenueHandler(venueRepository)
-	healthHandler := health.NewHealthHandler()
-
-	app.Route("/health", healthHandler.Register)
+	app.Route("/health", health.NewHealthHandler())
 
 	apiv1 := app.Group("/api/v1")
-	apiv1.Route("/events", eventHandler.Register)
-	apiv1.Route("/venues", venueHandler.Register)
+	apiv1.Route("/events", eventhttp.NewEventHandler(eventRepository, eventCrudService), "events-v1")
+	apiv1.Route("/venues", venuehttp.NewVenueHandler(venueRepository), "venues-v1")
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	defer stop()
