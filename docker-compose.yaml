@@ -43,6 +43,32 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  
+  pz-queue:
+    image: bitnami/kafka:latest
+    restart: unless-stopped
+    ports:
+      - 9092:9092
+    volumes:
+      - ./docker/data/pz-queue-data:/bitnami/kafka
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_KAFKA_CLUSTER_ID: "KRaft-cluster-0x2f3a9c1d"
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@pz-queue:9091
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9090,CONTROLLER://:9091,EXTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://pz-queue:9090,EXTERNAL://${HOSTNAME:-127.0.0.1}:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  
+  pz-queue-ui:
+    image: docker.redpanda.com/redpandadata/console:latest
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    environment:
+      KAFKA_BROKERS: pz-queue:9090
 
 volumes:
   pz-db-data:
