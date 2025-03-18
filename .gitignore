@@ -4,6 +4,7 @@
 # IDE settings
 .idea/
 .vscode/
+.cursor/
 
 build/
 bin/
