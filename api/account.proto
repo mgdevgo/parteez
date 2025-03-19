@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package parteez.v1;
+
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "parteez/internal/api";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+    info: {
+        title: "Parteez API";
+        version: "1.0";
+        contact: {
+            url: "https://github.com/mgdevgo/parteez";
+        };
+        license: {
+            name: "MIT";
+            url: "https://opensource.org/licenses/MIT";
+        };
+    };
+};
+
+service AccountService {
+    // SignIn logs in the user.
+    rpc SignIn(AuthRequest) returns (AuthResponse) {
+        option (google.api.http) = {post: "/api/v1/auth/signin"};
+    }
+    // SignUp creates a new user.
+    rpc SignUp(AuthRequest) returns (AuthResponse) {
+        option (google.api.http) = {post: "/api/v1/auth/signup"};
+    }
+    // SignOut logs out the user.
+    rpc SignOut(SignOutRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {post: "/api/v1/auth/signout"};
+    }
+}
+
+message AuthRequest {
+    oneof login {
+        string email = 1;
+        string username = 2;
+    }
+    string password = 3;
+
+    enum AccountType {
+        ACCOUNT_TYPE_UNSPECIFIED = 0;
+        ACCOUNT_TYPE_USER = 1;
+        ACCOUNT_TYPE_ADMIN = 2;
+        ACCOUNT_TYPE_GUEST = 3;
+        ACCOUNT_TYPE_ARTIST = 4;
+    }
+    AccountType account_type = 4;
+}
+
+message AuthResponse {
+    string token = 1;
+}
+
+message SignOutRequest {}
