@@ -1,0 +1,38 @@
+version: v2
+
+lint:
+    use:
+        - DEFAULT
+    enum_zero_value_suffix: _UNSPECIFIED
+    # service_suffix: API
+    # ignore: []
+    # except: []
+    # allow_comment_ignores: false
+    # ignore_only: {}
+deps:
+    - github.com/googleapis/googleapis
+    - github.com/grpc-ecosystem/grpc-gateway
+generate:
+    inputs:
+        # - directory: "./api"
+    plugins:
+        - name: go
+          out: ./internal/api/
+          opts:
+              paths: source_relative
+
+        - name: go-grpc
+          out: ./internal/api/
+          opts:
+              paths: source_relative
+
+        - name: openapiv2
+          out: ./api/
+          opts:
+              output_format: json
+              allow_merge: true
+              omit_enum_default_value: true
+
+breaking:
+    ignore: []
+    against_git_ref: master

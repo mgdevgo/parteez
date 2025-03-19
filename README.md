@@ -6,7 +6,15 @@
 ## Getting Started
 
 ```shell
-  make run
+make run
+```
+
+## Development
+
+Install project dependencies
+
+```shell
+go install tool
 ```
 
 ## Requirements
@@ -30,4 +38,16 @@
 - **testify** - Testing framework
 - **swaggo** - Swagger/OpenAPI documentation generator
 
+## Troubleshooting
 
+### Remove warnings in proto files
+
+Open `settings.json` in vscode and paste this options
+
+```json
+"protoc": {
+    "options": [
+        "--proto_path=${userHome}/.easyp/"
+    ]
+}
+```
